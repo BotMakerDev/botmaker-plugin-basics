@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      groupId is com.github.LiQiyeDev for the same reason as every other published module: JitPack serves
+      this repo as com.github.LiQiyeDev:botmaker-plugin-basics:<tag> whatever this pom says, so matching it
+      here makes the reactor GAV identical to the published GAV. The version is cosmetic.
+    -->
+    <groupId>com.github.LiQiyeDev</groupId>
+    <artifactId>botmaker-plugin-basics</artifactId>
+    <version>0.0.0-SNAPSHOT</version>
+
+    <name>BotMaker Basics Plugin</name>
+    <description>
+        Plugin #2: the nine JDK value types a project's parameters are made of, the Settings a running bot
+        reads them through, and the project store both of those are written into — usable by any other
+        plugin as an ordinary Maven dependency.
+    </description>
+
+    <!--
+      THIS IS A PLUGIN, not a platform module, and the distinction decides every scope below. Studio does
+      not have this artifact; a project that wants it resolves it, and PluginLoader puts it on that
+      project's own classloader beside every other plugin. The contract and JavaFX are the host's and are
+      therefore `provided`; everything else here travels.
+
+      IT IS ALSO A PLUGIN OTHER PLUGINS DEPEND ON, which is new in this project and has a price stated once
+      here so it is not rediscovered: botmaker-sdk will declare this module at `compile` scope (phase 2 of
+      ~/.claude/plans/settings-becomes-a-plugin.md), so its compiled classes are pinned to whatever is
+      published here. Nobody can rewrite a .class file, so this module owes never-delete and @ReplacedBy
+      exactly as com.botmaker.sdk.api does. The trap that goes with it is Maven's nearest-wins mediation:
+      nothing may declare this module DIRECTLY beside a plugin that already brings it, or the direct entry
+      wins and a bot runs a version its plugin was never built against. That is the landmine
+      MavenService.TOOLKIT_FALLBACK_VERSION was, and why that constant is deleted.
+    -->
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>25.0.4</javafx.version>
+        <junit.version>5.10.2</junit.version>
+        <jackson.version>2.17.0</jackson.version>
+        <!-- The reactor/offline values. jitpack.yml injects the released tags from .deps.env at build time. -->
+        <botmaker.studioapi.version>0.0.0-SNAPSHOT</botmaker.studioapi.version>
+        <botmaker.plugintoolkit.version>0.0.0-SNAPSHOT</botmaker.plugintoolkit.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!--
+          The contract, `provided`: this module implements StudioPlugin, and the host already has these
+          classes. A second copy inside this jar is the one mistake that produces a ClassCastException
+          between two classes with identical names — PluginLoader is parent-first for
+          com.botmaker.plugin.api.** precisely so there is exactly one.
+        -->
+        <dependency>
+            <groupId>com.github.LiQiyeDev</groupId>
+            <artifactId>botmaker-studio-api</artifactId>
+            <version>${botmaker.studioapi.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--
+          The widgets, `compile`: resolved onto THIS plugin's classloader, so this plugin's toolkit version
+          is its own and no other plugin's. Never `provided` (the host has none) and never `optional`
+          (optional means not transitive, which is the same bug this project has shipped three times).
+        -->
+        <dependency>
+            <groupId>com.github.LiQiyeDev</groupId>
+            <artifactId>botmaker-plugin-toolkit</artifactId>
+            <version>${botmaker.plugintoolkit.version}</version>
+        </dependency>
+
+        <!--
+          JavaFX, `provided` for the same reason as the contract: a slot editor draws into the host's scene
+          graph, and PluginLoader is parent-first for `javafx.` so the host supplies the one copy. It is
+          here because a subclass of the toolkit's AbstractStudioPlugin resolves signatures that name
+          javafx.scene.Node; a bot never sees it, because `provided` is not transitive.
+        -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--
+          Jackson, `compile`, and it is here rather than in the toolkit because the store is here. It moved
+          with com.botmaker.plugin.toolkit.config in phase 3 of the plan above: a plugin shipping nothing but
+          a grammar should not have to take a widget kit's JSON parser, and the widget kit should not have to
+          carry a parser for a package that is not a widget.
+
+          2.17.0 to match botmaker-shared, the SDK and Studio, which all declare that version — so this adds
+          a jar to a plugin's classpath and nothing to the processes that matter most.
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- PIN THE COMPILER. Redundant locally, load-bearing on JitPack: its Maven defaults
+                 maven-compiler-plugin to 3.1, which predates maven.compiler.release (3.6) and so builds
+                 with source 5 — "Source option 5 is no longer supported". 3.11.0 rather than a newer one:
+                 3.12.0 raised the plugin's own Maven prerequisite to 3.6.3, which JitPack's Maven 3.6.1
+                 does not meet, and Maven refuses to EXECUTE such a plugin — the tag is pushed, permanent,
+                 and resolves to nothing. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+
+            <!--
+              Bakes the two ${botmaker.*.version} pins into the pom that is installed and published. Without
+              it a -D on the command line changes what THIS build resolves and nothing about what a consumer
+              resolving this plugin from JitPack sees — the 0.0.0-SNAPSHOT bug that shipped in every SDK up
+              to v1.0.24.
+
+              1.4.1 for JitPack, NOT stale: 1.5.0 declares a Maven 3.5.4 prerequisite and 1.6.0 declares
+              3.6.3. botmaker-plugin-toolkit v0.0.4 died on exactly that. Do not bump without proving
+              JitPack's mvn version.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.4.1</version>
+                <configuration>
+                    <flattenMode>oss</flattenMode>
+                    <pomElements>
+                        <repositories>keep</repositories>
+                    </pomElements>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
