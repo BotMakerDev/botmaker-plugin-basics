@@ -7,7 +7,7 @@ repositories fit together; this file is what is true *here*.
 
 **Plugin #2**, and the first plugin in the project that is not the SDK. Its id is `com.botmaker.basics`.
 
-It owns three things. The first landed on 2026-09-09; the other two arrive in the phases after it.
+It owns three things, all three landed on 2026-09-09.
 
 1. **The nine JDK value types** — `TEXT`, `YES_NO`, `WHOLE_NUMBER`, `DECIMAL_NUMBER`, `CHARACTER`,
    `COLOR`, `DATE`, `TIME_OF_DAY`, `DURATION`, in `com.botmaker.plugin.basics.values`. They are nobody's
@@ -18,11 +18,19 @@ It owns three things. The first landed on 2026-09-09; the other two arrive in th
    running bot calls it (`com.botmaker.sdk.authoring.WireText` delegates to it, so there is one grammar
    rather than two); `BasicsValueTypes` is the registration, the labels and the Java literals, and names the
    contract and the toolkit, both of which a bot does not have.
-2. **`Settings` and `ValueGrammar`** — how a *running bot* reads its own parameters. They arrive here from
-   `com.botmaker.plugin.toolkit.config`, where they landed on 2026-09-09 and lasted a week.
-3. **The project store** — one file, sectioned by owning plugin id. Reading and writing it is this module's
-   API and is used by other plugins for their own data; the SDK plugin stores its activities, flow and
-   presets through it rather than beside it.
+2. **`Settings` and `ValueGrammar`**, in `com.botmaker.plugin.basics.store` — how a *running bot* reads its
+   own parameters, plus `BasicsGrammar`, this module's own nine readers. They came from
+   `com.botmaker.plugin.toolkit.config`, where they landed earlier the same day and never shipped, and from
+   `botmaker-shared` for the two days before that. Each move was right about the one before it; what
+   settled it is that **a widget kit owns no value types**, so it could hold the mechanism only under a
+   promise never to use it, while this module owns nine and ships a grammar for them like any plugin.
+3. **The project store** — `ProjectStore`, one file **sectioned by owning plugin id**. `section(id)` is a
+   plugin's own data; `withSection` writes one section and carries every other one through, so an editor
+   without a plugin installed cannot save that plugin's data away. A file with no `plugins` object is a
+   legacy file and answers its root for every id, which is what every project written so far is — the
+   fallback names no plugin id, deliberately, because an id in the mechanism is the mechanism knowing its
+   first two customers. Giving the SDK plugin's activities, flow and presets their own section is a later
+   phase.
 
 ## The three rules that decide everything here
 
@@ -40,12 +48,14 @@ plugin that already brings it, or a bot resolves a version its plugin was never 
 with `NoSuchMethodError` at whichever method moved. That is precisely the landmine
 `MavenService.TOOLKIT_FALLBACK_VERSION` was, and why that constant is deleted.
 
-**Half of this module runs in a bot, and that half may name neither the contract nor JavaFX.** A bot's
-classpath has no contract on it and no scene graph in it. `JdkText`, and later `Settings` and the grammar,
-are read by the bot itself; the plugin half (`BasicsValueTypes`, and later the editors and the parameters)
-is read by an editor. When the store lands, the source scan that holds the line comes with it — a *source* scan rather than a classpath one,
-because a `provided` dependency is present in the module that declares it and so a classpath check passes
-for a jar that cannot load anywhere else.
+**Most of this module runs in a bot, and that part may name neither the contract nor JavaFX.** A bot's
+classpath has no contract on it and no scene graph in it. `BasicsIsBotSafeTest` scans the **source** —
+rather than the classpath, where a `provided` dependency is present in the module that declares it, so the
+check would pass for a jar that cannot load anywhere else — and it works by **exemption**: everything is
+checked, and only `BasicsPlugin` and `BasicsValueTypes` are named as editor-side. That is the inverse of the
+rule it replaced (`ToolkitConfigIsBotSafeTest` named the one package that had to be safe), and the direction
+matters: a class added tomorrow is checked by default, so the mistake is a red test here rather than a
+`NoClassDefFoundError` in a stranger's bot.
 
 ## Value type ids
 

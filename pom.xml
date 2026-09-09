@@ -92,10 +92,15 @@
         </dependency>
 
         <!--
-          Jackson, `compile`, and it is here rather than in the toolkit because the store is here. It moved
-          with com.botmaker.plugin.toolkit.config in phase 3 of the plan above: a plugin shipping nothing but
-          a grammar should not have to take a widget kit's JSON parser, and the widget kit should not have to
-          carry a parser for a package that is not a widget.
+          Jackson, `compile`, and it is here rather than in the toolkit because the store is here — it
+          arrived with com.botmaker.plugin.basics.store on 2026-09-09. ProjectStore parses and writes the
+          project file and something has to parse JSON. Never `optional`: that means not transitive, so it
+          would be on this module's own classpath and absent from every consumer's, and every test here
+          would pass while every bot failed at the first settings read.
+
+          A plugin shipping nothing but a grammar should not have to take a widget kit's JSON parser, and a
+          widget kit should not carry a parser for a package that is not a widget — which is the whole of why
+          this package is here rather than in botmaker-plugin-toolkit, where it spent one day.
 
           2.17.0 to match botmaker-shared, the SDK and Studio, which all declare that version — so this adds
           a jar to a plugin's classpath and nothing to the processes that matter most.

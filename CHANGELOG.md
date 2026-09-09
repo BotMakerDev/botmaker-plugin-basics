@@ -27,9 +27,39 @@ heading in that module's own release commit.
   ones the SDK's enum constants had**, so no stored project changes meaning, and `botmaker-sdk`'s `WireText`
   delegates to `JdkText` rather than keeping a second copy of the grammar.
 
-`JdkText` names nothing but the JDK, because it runs in a bot: this module reaches a bot's classpath
-through the SDK's `compile`-scope dependency on it, where the contract and JavaFX — both `provided` — are
-absent. `BasicsValueTypes` names both and is editor-side.
+- **`com.botmaker.plugin.basics.store` — the project store, and how a bot reads its own parameters.**
 
-What it will own next — `Settings`, the grammar a bot reads its parameters through, and the project store —
-arrives in the phases after this one.
+  ```java
+  Duration   wait   = Settings.load("wait", Duration.class);
+  int        health = Settings.load("minHealth", int.class);
+  List<Rect> zones  = Settings.loadAll("zones", Rect.class);
+  boolean    on     = Settings.enabled("Mining");
+  ```
+
+  `ProjectStore` is the file itself, **sectioned by owning plugin id**: `section(id)` is a plugin's own data
+  and `withSection` carries every other plugin's through untouched, so an editor without a plugin installed
+  cannot save that plugin's data away. A file with no `plugins` object is a legacy file and answers its root
+  for every id, which is what every project written so far is. `ProjectValues` reads one section as untyped
+  text; `ValueGrammar` is `Class<T> → parse/store/fallback`, found by `ServiceLoader`; `Settings` resolves
+  one against the other. **Ship a `ValueGrammar` beside any value type you register**, and a bot reads your
+  type by name exactly as it reads a `Duration`.
+
+  Every read is total: an undeclared name, text that will not parse, a name declared as another type and a
+  missing file all answer the type's own fallback. **One thing throws** — a type no grammar on the classpath
+  claims, which is a packaging mistake rather than a bad file and has no value to fall back to. Two grammars
+  claiming one type is refused by name rather than resolved by jar order. Writing throws too: a save that
+  silently did not happen is the one failure a user cannot see.
+
+  These arrived from `com.botmaker.plugin.toolkit.config`, where they had spent one day and never shipped
+  (and from `botmaker-shared` the two days before that). A widget kit owns no value types, so it could hold
+  the mechanism only by promising never to use it, and a plugin wanting to read one parameter had to resolve
+  a widget kit and a JSON parser to do it. This module owns nine value types and ships `BasicsGrammar` for
+  them, which is the arrangement every other plugin is offered.
+
+`JdkText`, `BasicsGrammar` and everything under `store` name nothing but the JDK and Jackson, because they
+run in a bot: this module reaches a bot's classpath through the SDK's `compile`-scope dependency on it,
+where the contract and JavaFX — both `provided` — are absent. `BasicsIsBotSafeTest` scans the source and
+exempts only `BasicsPlugin` and `BasicsValueTypes`, so a new class is checked by default.
+
+What is left for a later phase is giving the SDK plugin's activities, flow and presets their own section of
+the store rather than the unsectioned top level they still live at.

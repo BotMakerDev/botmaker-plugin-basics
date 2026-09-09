@@ -1,6 +1,7 @@
 package com.botmaker.plugin.basics;
 
 import com.botmaker.plugin.api.value.ValueCatalog;
+import com.botmaker.plugin.basics.store.ProjectStore;
 import com.botmaker.plugin.basics.values.BasicsValueTypes;
 import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
 
@@ -14,13 +15,14 @@ import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
  * and were the SDK's only because the SDK was written first; the SDK keeps the eight that really are its
  * own and merges these in like any host merging any plugin's.
  *
- * <p><b>What it will own next</b>, in the order the plan lands it:
+ * <p><b>It owns the store too</b>, since the same day: {@code com.botmaker.plugin.basics.store} — the
+ * {@link ProjectStore} a project's data lives in, sectioned by owning plugin id, and the
+ * {@code Settings}/{@code ValueGrammar} pair a <em>running bot</em> reads its own parameters through. Both
+ * arrived from {@code com.botmaker.plugin.toolkit.config}, where they had spent a day; a widget kit owns no
+ * value types, so it could hold the mechanism only by promising never to use it.
  *
- * <ul>
- *   <li>{@code Settings} and {@code ValueGrammar}: how a <em>running bot</em> reads its own parameters;</li>
- *   <li>the project store those values are written into, whose read/write API is this module's and is used
- *       by other plugins — the SDK plugin stores its activities, flow and presets through it.</li>
- * </ul>
+ * <p>What is left for a later phase is moving the SDK plugin's own activities, flow and presets into their
+ * section of that file rather than beside it.
  *
  * <p><b>The id is the identity and it never changes.</b> {@code com.botmaker.basics} is what a project's
  * stored data refers to and what the plugin registry refuses to admit twice; the Maven coordinate may move
@@ -35,8 +37,14 @@ import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
  */
 public final class BasicsPlugin extends AbstractStudioPlugin {
 
-    /** The registered plugin id. Stored in projects; never change it. */
-    public static final String ID = "com.botmaker.basics";
+    /**
+     * The registered plugin id. Stored in projects; never change it.
+     *
+     * <p>Defined in the bot half, because a running bot needs the same string to find its section of the
+     * project store and cannot load this class — it names the contract, which is {@code provided} and so
+     * absent from a bot's classpath.
+     */
+    public static final String ID = ProjectStore.BASICS_ID;
 
     /** What Studio shows in Manage Plugins. */
     public static final String NAME = "BotMaker Basics";
