@@ -1,6 +1,7 @@
 package com.botmaker.plugin.basics;
 
 import com.botmaker.plugin.api.StudioPlugin;
+import com.botmaker.plugin.basics.values.BasicsValueTypes;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -8,11 +9,12 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What can be asserted about a plugin that contributes nothing yet: that a host can find it, construct it,
- * and get an empty but well-formed answer to each of its four questions.
+ * What a host asks a plugin: that it can find it, construct it, and get a well-formed answer to each of its
+ * four questions — nine value types since 2026-09-09, and empty for the other three.
  *
  * <p>The discovery half runs {@link ServiceLoader} on this module's own classpath rather than through
  * {@code PluginLoader}. That is deliberate: {@code botmaker-plugin-host} is a <em>host's</em> dependency,
@@ -44,14 +46,22 @@ class BasicsPluginTest {
     }
 
     @Test
-    void every_contribution_is_empty_and_none_of_them_is_null() {
+    void every_contribution_is_well_formed_and_none_of_them_is_null() {
         // An empty catalog with no problems() is what a host reads as "this plugin offers no blocks",
         // which is a supported state — not the same thing as a malformed one, which would still have to
         // let the project open.
         assertTrue(plugin.catalog(null).problems().isEmpty(), plugin.catalog(null).problems().toString());
-        assertTrue(plugin.valueTypes().types().isEmpty());
         assertTrue(plugin.slotEditors().isEmpty());
         assertTrue(plugin.parameters(null).isEmpty());
+    }
+
+    @Test
+    void the_value_types_are_the_nine_this_plugin_registers() {
+        // Through the plugin rather than through BasicsValueTypes.CATALOG directly: what a host gets is the
+        // memoised buildValueTypes() hook, and a plugin that registers types nobody can reach is the bug.
+        assertEquals(BasicsValueTypes.CATALOG.types(), plugin.valueTypes().types());
+        assertEquals(9, plugin.valueTypes().types().size(), plugin.valueTypes().types().toString());
+        assertSame(plugin.valueTypes(), plugin.valueTypes(), "the build hook must run at most once");
     }
 
     @Test

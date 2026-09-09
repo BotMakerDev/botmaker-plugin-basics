@@ -1,21 +1,22 @@
 package com.botmaker.plugin.basics;
 
+import com.botmaker.plugin.api.value.ValueCatalog;
+import com.botmaker.plugin.basics.values.BasicsValueTypes;
 import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
 
 /**
  * BotMaker Basics — plugin #2, and the first plugin in this project that is not the SDK.
  *
- * <p>It contributes nothing yet, and that is the whole of phase 1: a plugin that a host can find,
- * construct and ask its four questions, so every phase after this one changes a module that already loads
- * rather than proving the platform and the feature in the same commit.
+ * <p><b>It owns the nine JDK value types</b> since 2026-09-09 — {@code TEXT}, {@code YES_NO},
+ * {@code WHOLE_NUMBER}, {@code DECIMAL_NUMBER}, {@code CHARACTER}, {@code COLOR}, {@code DATE},
+ * {@code TIME_OF_DAY}, {@code DURATION}, registered in
+ * {@link com.botmaker.plugin.basics.values.BasicsValueTypes}. They are nobody's vocabulary in particular
+ * and were the SDK's only because the SDK was written first; the SDK keeps the eight that really are its
+ * own and merges these in like any host merging any plugin's.
  *
- * <p><b>What it will own</b>, in the order the plan lands it:
+ * <p><b>What it will own next</b>, in the order the plan lands it:
  *
  * <ul>
- *   <li>the nine JDK value types — {@code TEXT}, {@code YES_NO}, {@code WHOLE_NUMBER},
- *       {@code DECIMAL_NUMBER}, {@code CHARACTER}, {@code COLOR}, {@code DATE}, {@code TIME_OF_DAY},
- *       {@code DURATION} — which are nobody's vocabulary in particular and are the SDK's today only
- *       because the SDK was written first;</li>
  *   <li>{@code Settings} and {@code ValueGrammar}: how a <em>running bot</em> reads its own parameters;</li>
  *   <li>the project store those values are written into, whose read/write API is this module's and is used
  *       by other plugins — the SDK plugin stores its activities, flow and presets through it.</li>
@@ -42,5 +43,14 @@ public final class BasicsPlugin extends AbstractStudioPlugin {
 
     public BasicsPlugin() {
         super(ID, NAME);
+    }
+
+    /**
+     * The nine types, built at most once and only when a host asks — {@code AbstractStudioPlugin}'s hook,
+     * never a field, because {@code ServiceLoader} runs the constructor while a project is opening.
+     */
+    @Override
+    protected ValueCatalog buildValueTypes() {
+        return BasicsValueTypes.CATALOG;
     }
 }

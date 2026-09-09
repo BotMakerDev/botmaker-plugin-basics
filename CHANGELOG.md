@@ -20,6 +20,16 @@ heading in that module's own release commit.
   `ci.yml` that resolves both from source, and a `--plugin-basics` flag in the umbrella's `release.sh` and
   in `com.botmaker.cli.release`.
 
-It contributes nothing yet, deliberately. What it will own — the nine JDK value types, `Settings`, the
-grammar and the project store — arrives in the phases after this one, each against a module that already
-loads.
+- **The nine JDK value types**, moved out of `botmaker-sdk` — `TEXT`, `YES_NO`, `WHOLE_NUMBER`,
+  `DECIMAL_NUMBER`, `CHARACTER`, `COLOR`, `DATE`, `TIME_OF_DAY`, `DURATION`. `BasicsValueTypes` registers
+  them through the same `ValueCatalog.builder()` any plugin uses and `BasicsPlugin.buildValueTypes()`
+  contributes them; `JdkText` is the grammar their stored text is read and written in. **The ids are the
+  ones the SDK's enum constants had**, so no stored project changes meaning, and `botmaker-sdk`'s `WireText`
+  delegates to `JdkText` rather than keeping a second copy of the grammar.
+
+`JdkText` names nothing but the JDK, because it runs in a bot: this module reaches a bot's classpath
+through the SDK's `compile`-scope dependency on it, where the contract and JavaFX — both `provided` — are
+absent. `BasicsValueTypes` names both and is editor-side.
+
+What it will own next — `Settings`, the grammar a bot reads its parameters through, and the project store —
+arrives in the phases after this one.
