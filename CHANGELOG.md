@@ -36,13 +36,15 @@ heading in that module's own release commit.
   boolean    on     = Settings.enabled("Mining");
   ```
 
-  `ProjectStore` is the file itself, **sectioned by owning plugin id**: `section(id)` is a plugin's own data
-  and `withSection` carries every other plugin's through untouched, so an editor without a plugin installed
-  cannot save that plugin's data away. A file with no `plugins` object is a legacy file and answers its root
-  for every id, which is what every project written so far is. `ProjectValues` reads one section as untyped
-  text; `ValueGrammar` is `Class<T> → parse/store/fallback`, found by `ServiceLoader`; `Settings` resolves
-  one against the other. **Ship a `ValueGrammar` beside any value type you register**, and a bot reads your
-  type by name exactly as it reads a `Duration`.
+  `PluginData` is the layout — a plugin's data is a folder of its own files,
+  `plugins/<id prefix>/<last segment>/<name>.json` inside the project's resources, created on demand, with
+  the name normalised so one file cannot become two under two spellings. `ProjectStore` is one of those
+  files, read totally and written whole. `ProjectValues` reads one as untyped text, and
+  `ProjectValues.forPlugin(id)` is how a bot reaches another plugin's — **resolving one classpath path and
+  enumerating nothing**, which is what makes a folder tree readable from inside a jar. `ValueGrammar` is
+  `Class<T> → parse/store/fallback`, found by `ServiceLoader`; `Settings` resolves one against the other.
+  **Ship a `ValueGrammar` beside any value type you register**, and a bot reads your type by name exactly as
+  it reads a `Duration`.
 
   Every read is total: an undeclared name, text that will not parse, a name declared as another type and a
   missing file all answer the type's own fallback. **One thing throws** — a type no grammar on the classpath
@@ -56,10 +58,20 @@ heading in that module's own release commit.
   a widget kit and a JSON parser to do it. This module owns nine value types and ships `BasicsGrammar` for
   them, which is the arrangement every other plugin is offered.
 
-`JdkText`, `BasicsGrammar` and everything under `store` name nothing but the JDK and Jackson, because they
-run in a bot: this module reaches a bot's classpath through the SDK's `compile`-scope dependency on it,
-where the contract and JavaFX — both `provided` — are absent. `BasicsIsBotSafeTest` scans the source and
-exempts only `BasicsPlugin` and `BasicsValueTypes`, so a new class is checked by default.
+- **`ParameterStore` — how any plugin declares parameters**, generalised out of `botmaker-sdk`, where it was
+  `SdkParameters` and was plugin #1's last storage privilege. A plugin declares a `ParameterGroup`, holds a
+  store over its own `PluginData`, and hands the host back what `rows(groupId)` answers; `apply(edit)` takes
+  a changed value and answers the row **as stored**. Beside those two are the declaration verbs a parameters
+  window performs — `declare`, `remove`, `rename`, `retype`, `setOptions`, `setBounds`, `setCategory`,
+  `setVisibility`, `setDescription` — and the coercion that comes with being the editor: canonicalise
+  through the owning type's codec, clamp to a declared `Range`, prune a value to the options still on offer,
+  seed a fresh one with the type's default. A name is unique within a group and only there, so two plugins —
+  and two groups of one plugin — may both offer a `timeout`, and a group only ever touches its own rows.
 
-What is left for a later phase is giving the SDK plugin's activities, flow and presets their own section of
-the store rather than the unsectioned top level they still live at.
+`JdkText`, `BasicsGrammar` and the rest of `store` name nothing but the JDK and Jackson, because they run in
+a bot: this module reaches a bot's classpath through the SDK's `compile`-scope dependency on it, where the
+contract and JavaFX — both `provided` — are absent. `BasicsIsBotSafeTest` scans the source and exempts only
+`BasicsPlugin`, `BasicsValueTypes` and `ParameterStore`, so a new class is checked by default.
+
+What is left for a later phase is giving the SDK plugin's activities and flow files of their own in the tree
+rather than the top level of `activities.json` they still live at.

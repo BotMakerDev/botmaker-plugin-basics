@@ -29,10 +29,11 @@ import java.util.List;
  * which declares it at {@code compile} scope. Reading a value is now an ordinary plugin's API that any other
  * plugin may depend on, rather than something the platform grants.
  *
- * <p><b>It reads one section of a {@link ProjectStore}</b>, which is what makes it a plugin's reader rather
- * than the file's owner: the variables belong to {@code com.botmaker.basics} and the activities and the flow
- * to whoever owns those. Until a project is rewritten in the sectioned shape, a file with no
- * {@code plugins} object answers every section with its own root — see {@link ProjectStore#section}.
+ * <p><b>It reads one document</b>, which is what makes it a plugin's reader rather than the file's owner.
+ * Which document depends on who is asking: {@link #forPlugin} reads one plugin's own parameters out of the
+ * folder tree {@link PluginData} lays out, and {@link #current()} reads the project file that predates that
+ * tree, because the SDK's activities and flow are still in it until phases 6c–6f of the plan move them.
+ * There is no sectioned file and no legacy fallback any more — see {@link ProjectStore}.
  *
  * <h2>Nothing here throws</h2>
  *
@@ -64,23 +65,27 @@ public final class ProjectValues {
         this.root = root;
     }
 
-    /**
-     * The values in one section of a store — this plugin's, unless a caller says otherwise.
-     *
-     * <p>A section rather than a whole file, because the variables are {@code com.botmaker.basics}' data and
-     * the activities and the flow are somebody else's. Today every project is still unsectioned, so the
-     * section a legacy store hands back <em>is</em> the whole document and nothing about what this class
-     * reads has changed; phase 6 is what gives the activities their own owner.
-     */
-    public static ProjectValues in(ProjectStore store, String pluginId) {
+    /** The values in {@code store}'s document, or empty ones. */
+    public static ProjectValues in(ProjectStore store) {
         if (store == null) return EMPTY;
-        JsonNode section = store.section(pluginId);
-        return section == null || section.isMissingNode() ? EMPTY : new ProjectValues(section);
+        JsonNode root = store.root();
+        return root == null || root.isMissingNode() ? EMPTY : new ProjectValues(root);
+    }
+
+    /**
+     * The parameters {@code pluginId} stores, read off this bot's classpath.
+     *
+     * <p>One resource path, resolved from the id and the file name — <b>nothing is enumerated</b>, which is
+     * what makes a folder tree readable from inside a jar. A plugin that has stored nothing reads as empty,
+     * which is the ordinary state of a project nobody has declared a parameter in.
+     */
+    public static ProjectValues forPlugin(String pluginId) {
+        return load(PluginData.resource(pluginId, PluginData.PARAMETERS));
     }
 
     /** This bot's own values, parsed once. Never {@code null}, and empty when there is nothing to read. */
     public static synchronized ProjectValues current() {
-        if (current == null) current = in(ProjectStore.current(), ProjectStore.BASICS_ID);
+        if (current == null) current = in(ProjectStore.current());
         return current;
     }
 
@@ -115,12 +120,12 @@ public final class ProjectValues {
      * process and describe a broken project rather than a trace. So they print.
      */
     public static ProjectValues load(String resource) {
-        return in(ProjectStore.load(resource), ProjectStore.BASICS_ID);
+        return in(ProjectStore.load(resource));
     }
 
     /** The values in {@code json}, or an empty set — the seam a test and the flow loader read through. */
     public static ProjectValues of(String json) {
-        return in(ProjectStore.of(json), ProjectStore.BASICS_ID);
+        return in(ProjectStore.of(json));
     }
 
     /** Values with nothing in them — every lookup below answers its own fallback. */
@@ -144,7 +149,7 @@ public final class ProjectValues {
     /** Every stored value of the named variable — one for a plain value, several for a list. */
     public List<String> many(String variable) {
         if (variable == null) return List.of();
-        for (JsonNode candidate : root.path("variables")) {
+        for (JsonNode candidate : rows()) {
             if (variable.equals(candidate.path("name").asText(null))) {
                 return strings(candidate.path("value"));
             }
@@ -155,7 +160,7 @@ public final class ProjectValues {
     /** Whether the file declares a variable by this name at all — the question {@code ""} cannot answer. */
     public boolean declares(String variable) {
         if (variable == null) return false;
-        for (JsonNode candidate : root.path("variables")) {
+        for (JsonNode candidate : rows()) {
             if (variable.equals(candidate.path("name").asText(null))) return true;
         }
         return false;
@@ -163,7 +168,7 @@ public final class ProjectValues {
 
     /** Every variable's name, in the order the file lists them. */
     public List<String> variables() {
-        return namesUnder("variables");
+        return namesUnder(rows());
     }
 
     /**
@@ -181,7 +186,7 @@ public final class ProjectValues {
      */
     public String typeId(String variable) {
         if (variable == null) return "";
-        for (JsonNode candidate : root.path("variables")) {
+        for (JsonNode candidate : rows()) {
             if (variable.equals(candidate.path("name").asText(null))) {
                 JsonNode type = candidate.path("type");
                 return type.isObject() ? type.path("type").asText("") : type.asText("");
@@ -209,7 +214,7 @@ public final class ProjectValues {
 
     /** Every activity's name, in the order the file lists them. */
     public List<String> activities() {
-        return namesUnder("activities");
+        return namesUnder(root.path("activities"));
     }
 
     /** Whether the named activity goes home before running. */
@@ -250,9 +255,22 @@ public final class ProjectValues {
         return MAPPER.missingNode();
     }
 
-    private List<String> namesUnder(String section) {
+    /**
+     * The declared parameters, under whichever of the two names the file spells them.
+     *
+     * <p>{@code parameters} is what a {@link ParameterStore} writes into a plugin's own file.
+     * {@code variables} is the older spelling, still what Studio writes into {@code activities.json} until
+     * phase 6f deletes its reader — one array name read in one place, rather than a fallback in the store
+     * itself. Both hold the same record, so nothing downstream tells them apart.
+     */
+    private JsonNode rows() {
+        JsonNode parameters = root.path("parameters");
+        return parameters.isArray() ? parameters : root.path("variables");
+    }
+
+    private List<String> namesUnder(JsonNode section) {
         List<String> names = new ArrayList<>();
-        for (JsonNode each : root.path(section)) {
+        for (JsonNode each : section) {
             String name = each.path("name").asText("");
             if (!name.isEmpty()) names.add(name);
         }

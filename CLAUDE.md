@@ -24,13 +24,33 @@ It owns three things, all three landed on 2026-09-09.
    `botmaker-shared` for the two days before that. Each move was right about the one before it; what
    settled it is that **a widget kit owns no value types**, so it could hold the mechanism only under a
    promise never to use it, while this module owns nine and ships a grammar for them like any plugin.
-3. **The project store** — `ProjectStore`, one file **sectioned by owning plugin id**. `section(id)` is a
-   plugin's own data; `withSection` writes one section and carries every other one through, so an editor
-   without a plugin installed cannot save that plugin's data away. A file with no `plugins` object is a
-   legacy file and answers its root for every id, which is what every project written so far is — the
-   fallback names no plugin id, deliberately, because an id in the mechanism is the mechanism knowing its
-   first two customers. Giving the SDK plugin's activities, flow and presets their own section is a later
-   phase.
+3. **The project store** — `PluginData` and `ProjectStore`. A plugin's data is a **folder of its own files**,
+   `plugins/<id prefix>/<last segment>/<name>.json` inside the project's resources, so `com.botmaker.sdk`
+   writes under `plugins/com.botmaker/sdk/`: a folder per author and a folder per plugin, derived from the
+   id alone with no new metadata. `ProjectStore` is one of those files, read totally and written whole;
+   `PluginData` is the layout, the creation on demand and the name normalisation that stops `Activities` and
+   `activities` becoming two files. **A bot enumerates nothing** — `PluginData.resource(id, name)` resolves
+   one classpath path, which is what makes a tree readable from inside a jar.
+
+   It was **one file sectioned by owning plugin id** until 2026-09-10, with a `withSection` that carried
+   every other plugin's section through so an editor without a plugin installed could not save that
+   plugin's data away. The maintainer withdrew it. Two of the single file's four defences survive and are
+   why the tree is better rather than merely different: no code opens another plugin's file at all, so the
+   carry-through becomes unnecessary rather than merely correct, and a merge conflict lands in one plugin's
+   file instead of in one shared document. Two are lost and are stated plainly: the single atomic write goes
+   — a crash mid-save can leave one plugin saved and another not — and a project is a directory to copy
+   rather than a file. **There is no migration**: nothing reads the legacy `activities.json` as plugin data,
+   so a project written before the tree reads as empty; nothing deletes it either, so a converter is
+   writable later.
+
+4. **`ParameterStore`** — how *any* plugin declares parameters, added 2026-09-10 and generalised out of the
+   SDK, where it was `SdkParameters`. Rows in, rows out, and the coercion between: canonicalise through the
+   owning type's codec, clamp to a declared `Range`, prune a value to the options still on offer, seed a
+   fresh one with the type's default. A plugin declares a `ParameterGroup`, holds one of these over its own
+   `PluginData`, and hands the host back what `rows(groupId)` answers. It names the contract, so it is
+   editor-only and exempted in `BasicsIsBotSafeTest`; the same file is read by a bot through
+   `ProjectValues.forPlugin(id)`, as untyped text. Giving the SDK plugin's activities and flow their own
+   files is a later phase.
 
 ## The three rules that decide everything here
 

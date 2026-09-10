@@ -3,85 +3,59 @@ package com.botmaker.plugin.basics.store;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * The one file a project's plugins store their data in, <b>sectioned by owning plugin id</b>.
+ * One JSON document a plugin keeps with a project, read totally and written whole.
  *
- * <pre>{@code
- * {
- *   "schemaVersion": 3,
- *   "plugins": {
- *     "com.botmaker.basics": { "variables": [ … ] },
- *     "com.botmaker.sdk":    { "activities": [ … ], "flow": { … } }
- *   }
- * }
- * }</pre>
+ * <p>Which document is {@link PluginData}'s business: a plugin's data is a folder of files named by that
+ * plugin, and this class is what one of those files is read and written through. It knows no schema — what
+ * the keys mean belongs to whoever stores them.
  *
- * <h2>Why one file with sections rather than a file per plugin</h2>
+ * <h2>It was one file sectioned by plugin id, and that is withdrawn</h2>
  *
- * <p>A project is one thing a user copies, commits and sends to somebody. A file per plugin makes that a set
- * of files whose members can go missing individually, and makes "open this project" mean "find everything
- * that might describe it". One file also means one atomic write and one place a merge conflict happens.
+ * <p>Until 2026-09-10 there was a single {@code activities.json} with a {@code plugins} object in it, a
+ * section per owning plugin, and a {@code withSection} that copied every other section through so an editor
+ * without a plugin installed could not save that plugin's data away. The maintainer's call replaced it with
+ * the folder tree, and the reasoning is on {@link PluginData}: the carry-through becomes unnecessary rather
+ * than merely correct, because no code opens another plugin's file at all.
  *
- * <p>The sections are what stop that being a shared mutable pot. <b>A plugin reads and writes its own
- * section and nothing else</b>, and {@link #withSection} copies every other section through untouched — so a
- * plugin that is not installed today does not lose its data when a project is saved by an editor that has
- * never heard of it. That is the same judgement as {@code ValueType.unknown}: never destroy a user's data
- * because a jar is missing.
+ * <p>Two things went with the sections. <b>There is no legacy fallback</b> — a file that predates the tree
+ * is not read by anything here, so a project written before it holds data nothing loads. Nothing deletes
+ * that file, so a converter is writable later; there is deliberately none now. And <b>no plugin id appears
+ * in this class</b>, which was already the rule: an id here would be the mechanism knowing its first two
+ * customers.
  *
  * <h2>Reading and writing it is this plugin's API, and that is the point of the module</h2>
  *
  * <p>It is <em>not</em> the platform's. The contract cannot hold it — a bot's classpath has no contract —
  * and the SDK holding it is what made storing project data a privilege of plugin #1. Any plugin that wants
- * to keep data with a project depends on {@code botmaker-plugin-basics} the way {@code botmaker-sdk} does
- * and calls this class; the SDK's own activities, flow and presets move into a section of this file rather
- * than beside it.
- *
- * <h2>A file with no sections is a legacy file, and every section answers its root</h2>
- *
- * <p>{@code activities.json} predates plugins entirely: it holds {@code activities}, {@code variables} and
- * {@code flow} at the top level, with no owner recorded anywhere. So {@link #section} falls back to the
- * whole document for <em>every</em> id, which is exactly the state such a project is in — one unsectioned
- * document that every reader sees. The alternative is telling every project ever written that it has no
- * data, and the fallback costs nothing once a project has been saved in the sectioned shape.
- *
- * <p>The fallback names no plugin id, deliberately: an id in this class would be the mechanism knowing its
- * first two customers, which is the shape of privilege this module exists to remove.
+ * to keep data with a project depends on {@code botmaker-plugin-basics} the way {@code botmaker-sdk} does.
  *
  * <h2>Nothing here throws while reading</h2>
  *
- * <p>A missing file, an unreadable one and a section that is not an object are ordinary states with an
+ * <p>A missing file, an unreadable one and a document that is not an object are ordinary states with an
  * answer. <b>A bot does not fail to start because of its own configuration file.</b> Writing is the other
  * half and does throw: a save that silently did not happen is the one failure a user cannot see.
  */
 public final class ProjectStore {
 
-    /** Where a project's store sits on a bot's classpath. */
+    /**
+     * Where the project file that predates the folder tree sits on a bot's classpath.
+     *
+     * <p>Still read, because the SDK's activities and flow are still in it: the readers that move are
+     * phases 6c to 6f of the plan, and until then this is where a running bot finds them. Nothing writes a
+     * plugin's <em>data</em> here any more — that is {@link PluginData}.
+     */
     public static final String RESOURCE = "/activities.json";
 
     /** Its name inside a project's resources directory, for whoever is writing it. */
     public static final String FILE = "activities.json";
-
-    /** The object the sections live under. */
-    public static final String SECTIONS = "plugins";
-
-    /**
-     * This plugin's own id, and the section its variables live in.
-     *
-     * <p>Here rather than on {@code BasicsPlugin} because a running bot reads this section and cannot load
-     * that class — it names the plugin contract, which is {@code provided} and so absent from a bot.
-     * {@code BasicsPlugin.ID} is defined as this constant, so the id is written once.
-     */
-    public static final String BASICS_ID = "com.botmaker.basics";
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
@@ -161,62 +135,20 @@ public final class ProjectStore {
         }
     }
 
-    /** A store with nothing in it. Every section answers a missing node. */
+    /** A store with nothing in it. Every lookup answers a missing node. */
     public static ProjectStore empty() {
         return EMPTY;
     }
 
-    // ---- sections ---------------------------------------------------------------------------------------
-
     /**
-     * The data {@code pluginId} owns — never {@code null}, and a missing node when it owns none.
+     * The store holding {@code document}, or an empty one for {@code null} — what {@link PluginData} writes
+     * through.
      *
-     * <p>For a file written in the sectioned shape this is {@code plugins.<pluginId>} and nothing else. For
-     * a file that predates sections it is the <b>whole document</b>, for every id: see the class note.
+     * <p>The tree is copied rather than held, so a caller that goes on editing the node it handed over
+     * cannot change what this store says it is.
      */
-    public JsonNode section(String pluginId) {
-        if (pluginId == null || pluginId.isBlank()) return MAPPER.missingNode();
-        JsonNode sections = root.path(SECTIONS);
-        if (!sections.isObject()) return root;      // a legacy file: one unsectioned document.
-        return sections.path(pluginId.trim());
-    }
-
-    /** Whether this store records owners at all — false for a file written before sections existed. */
-    public boolean isSectioned() {
-        return root.path(SECTIONS).isObject();
-    }
-
-    /** The plugin ids this store holds a section for, in file order. Empty for a legacy file. */
-    public List<String> sections() {
-        JsonNode sections = root.path(SECTIONS);
-        if (!sections.isObject()) return List.of();
-        List<String> out = new ArrayList<>();
-        sections.fieldNames().forEachRemaining(out::add);
-        return List.copyOf(out);
-    }
-
-    /**
-     * This store with {@code pluginId}'s section replaced — every other section carried through untouched.
-     *
-     * <p>A new store rather than a mutation, because the thing being replaced is what a plugin just decided
-     * and the thing being carried is what other plugins decided earlier; an in-place write makes the second
-     * depend on nobody having kept a reference to the first.
-     *
-     * <p><b>Writing a legacy file's section converts it.</b> The unsectioned top level is left exactly where
-     * it is — a reader that still expects it goes on working — and the sectioned form is added beside it, so
-     * the conversion cannot lose data by being half-finished. Phase 6 of the plan is what removes the old
-     * keys, in the pass that gives the activities an owner.
-     */
-    public ProjectStore withSection(String pluginId, JsonNode data) {
-        if (pluginId == null || pluginId.isBlank()) {
-            throw new IllegalArgumentException("a section belongs to a plugin id");
-        }
-        ObjectNode copy = root.isObject() ? ((ObjectNode) root).deepCopy() : MAPPER.createObjectNode();
-        ObjectNode sections = copy.path(SECTIONS).isObject()
-                ? (ObjectNode) copy.get(SECTIONS)
-                : copy.putObject(SECTIONS);
-        sections.set(pluginId.trim(), data == null ? MAPPER.createObjectNode() : data.deepCopy());
-        return new ProjectStore(copy);
+    public static ProjectStore of(JsonNode document) {
+        return document == null || document.isMissingNode() ? EMPTY : new ProjectStore(document.deepCopy());
     }
 
     // ---- writing ----------------------------------------------------------------------------------------
