@@ -1,5 +1,6 @@
 package com.botmaker.plugin.basics.store;
 
+import com.botmaker.plugin.api.ParameterDeclaration;
 import com.botmaker.plugin.api.ParameterEdit;
 import com.botmaker.plugin.api.ParameterRow;
 import com.botmaker.plugin.api.value.Range;
@@ -130,6 +131,66 @@ public final class ParameterStore {
         if (edit == null || !groupId.equals(edit.groupId())) return Optional.empty();
         return edit(edit.name(), row -> row.withValue(
                 normalize(edit.value(), row.type(), row.options(), row.bounds())));
+    }
+
+    /**
+     * The row the host wants this section to hold, reconciled against the row it holds.
+     *
+     * <p><b>This is the one contract call the nine verbs below are the implementation of.</b> The host never
+     * says "retype this"; it says <i>here is the row as I want it</i> and this decides what that costs — a
+     * retype resets the value and drops the bounds, options survive a change of shape and not of base type,
+     * a value is clamped into a newly declared range. Every difference is applied through the verb that owns
+     * its rule, in an order that matters: the type first, because retyping resets what comes after it, and
+     * the value last, because everything before it changes what a value is allowed to be.
+     *
+     * <p>Empty is <em>no row stands under that name</em>: a removal that happened, a group this store does
+     * not own, or a refusal — a name that is not an identifier, or one already taken here.
+     */
+    public Optional<ParameterRow> declared(ParameterDeclaration declaration) {
+        if (declaration == null || !groupId.equals(declaration.groupId())) return Optional.empty();
+        ParameterRow wanted = declaration.wanted();
+        if (wanted == null) {
+            remove(declaration.name());
+            return Optional.empty();
+        }
+        String name = declaration.name();
+        if (name.isEmpty() || current(name).isEmpty()) {
+            // A declaration against a row that is not here is an add, whatever the host believed: the file is
+            // the truth, and a row deleted in another window must not come back as a silent refusal.
+            if (declare(wanted.name(), wanted.type()).isEmpty()) return Optional.empty();
+            name = wanted.name();
+        }
+        if (!name.equals(wanted.name()) && rename(name, wanted.name()).isEmpty()) return Optional.empty();
+        String held = wanted.name();
+
+        ParameterRow before = current(held).orElse(null);
+        if (before == null) return Optional.empty();
+        boolean retyped = !before.type().equals(wanted.type());
+        if (retyped && retype(held, wanted.type()).isEmpty()) return Optional.empty();
+
+        // Only what the host actually changed is applied — every component whose wanted value equals the one
+        // the row already had is left to whatever the reconciliation above made of it. It matters for exactly
+        // one case and matters completely there: a window retyping a row hands back the row it is showing,
+        // whose value, bounds and options are still the old type's, and the reset is this store's rule. A
+        // component the host did change is applied either way, which is what lets an undo put an old type
+        // *and* its old value back in one declaration.
+        if (!wanted.options().equals(before.options())) setOptions(held, wanted.options());
+        if (!wanted.bounds().equals(before.bounds())) setBounds(held, wanted.bounds());
+        if (!wanted.category().equals(before.category())) setCategory(held, wanted.category());
+        if (wanted.visibility() != before.visibility()) setVisibility(held, wanted.visibility());
+        if (!wanted.description().equals(before.description())) setDescription(held, wanted.description());
+        // The value is last, because everything above it changes what a value is allowed to be.
+        if (!wanted.value().equals(before.value())) {
+            apply(new ParameterEdit(groupId, held, wanted.value()));
+        }
+        return current(held);
+    }
+
+    /** The row this group holds under {@code name}, or empty. */
+    public Optional<ParameterRow> current(String name) {
+        List<Entry> entries = read();
+        int at = indexOf(entries, name);
+        return at < 0 ? Optional.empty() : Optional.of(entries.get(at).row);
     }
 
     // ---- the declaration verbs, which are the owning plugin's own window's and nobody else's -------------

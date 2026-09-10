@@ -63,7 +63,10 @@ heading in that module's own release commit.
   store over its own `PluginData`, and hands the host back what `rows(groupId)` answers; `apply(edit)` takes
   a changed value and answers the row **as stored**. Beside those two are the declaration verbs a parameters
   window performs — `declare`, `remove`, `rename`, `retype`, `setOptions`, `setBounds`, `setCategory`,
-  `setVisibility`, `setDescription` — and the coercion that comes with being the editor: canonicalise
+  `setVisibility`, `setDescription`, reachable individually and, as `declared(ParameterDeclaration)`, as the
+  one call the contract makes: the host states the row it wants and this reconciles it, which is where those
+  nine live as an implementation rather than as a vocabulary — and the coercion that comes with being the
+  editor: canonicalise
   through the owning type's codec, clamp to a declared `Range`, prune a value to the options still on offer,
   seed a fresh one with the type's default. A name is unique within a group and only there, so two plugins —
   and two groups of one plugin — may both offer a `timeout`, and a group only ever touches its own rows.
