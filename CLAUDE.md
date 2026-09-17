@@ -52,6 +52,13 @@ It owns three things, all three landed on 2026-09-09.
    `ProjectValues.forPlugin(id)`, as untyped text. Giving the SDK plugin's activities and flow their own
    files is a later phase.
 
+   **The verbs are the owning plugin's own, and only a value crosses from outside** (2026-09-17).
+   `declared(ParameterDeclaration)` is deleted with the contract method it implemented: a *user* parameter
+   is a `@Param` field now and the host writes it there, so what a host may still do to one of these rows
+   is `apply(ParameterEdit)` — change its value — and the nine verbs (`declare`, `rename`, `retype`,
+   `setOptions`, `setBounds`, `setCategory`, `setVisibility`, `setDescription`, `remove`) are called by the
+   plugin that owns the group, from its own code. They stay public and are never deleted.
+
 5. **`@Param` and `PluginStore`**, added 2026-09-17, and together they are the split that matters now.
    `com.botmaker.plugin.basics.params.Param` is how a **user parameter** is declared: a `public static`
    field in the *bot's own Java*, which Studio reads off the syntax tree and whose initializer the value

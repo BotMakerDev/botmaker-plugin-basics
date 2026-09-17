@@ -33,6 +33,13 @@ import java.util.stream.Collectors;
  * {@link PluginData}, and handing the host back what {@link #rows} answers. Nothing about the SDK is left
  * in it — the vocabulary is the contract's, and the value types are whatever catalog the owner passes.
  *
+ * <p><b>These are a plugin's own rows, not the user's</b> (2026-09-17). A user parameter is a
+ * {@code @Param} static field in the bot's own Java, read and written by the host off the syntax tree; what
+ * belongs here is what the <em>plugin</em> declares about itself — an activity's enable flag, a capture
+ * target. So the declaration verbs below are called by the owning plugin, from its own code, and the only
+ * thing that reaches them from outside is a value ({@link #apply}). The host's way of asking for a row went
+ * with {@code StudioPlugin.parameterDeclared}.
+ *
  * <h2>What is stored, and where</h2>
  *
  * <p>One file per plugin, {@code parameters.json} inside that plugin's own folder — see {@link PluginData}
