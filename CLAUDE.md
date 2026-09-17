@@ -52,6 +52,23 @@ It owns three things, all three landed on 2026-09-09.
    `ProjectValues.forPlugin(id)`, as untyped text. Giving the SDK plugin's activities and flow their own
    files is a later phase.
 
+5. **`@Param` and `PluginStore`**, added 2026-09-17, and together they are the split that matters now.
+   `com.botmaker.plugin.basics.params.Param` is how a **user parameter** is declared: a `public static`
+   field in the *bot's own Java*, which Studio reads off the syntax tree and whose initializer the value
+   cell rewrites. `PluginStore` (and `Settings.forPlugin` on the bot side) is how a **plugin's own state**
+   is stored: a record in, a record out, over `PluginData`'s tree.
+
+   **The rule to hold on to: a user parameter is Java; a plugin's state is JSON.** `Settings.load(name,
+   Class)` and `ParameterStore` still exist, still work and are never deleted, and what they carry is a
+   plugin's rows — an activity's enable flag, a plugin's own settings. They stopped being how a bot reads
+   *its* parameters because a name is a string on both sides: a typo compiled and answered the type's
+   fallback, and the declaration lived where the bot's author could not see it.
+
+   `Param` is bot-safe like the rest, which is why its members are strings (`visibility`, `min`, `max`,
+   `options`): the contract's `Visibility` and the value types are off a bot's classpath, and the value's
+   own grammar parses the text exactly as it parses what a user types into the cell. It declares
+   `Param.EDITOR`/`Param.PUBLIC` so neither Studio nor a bot spells those two strings itself.
+
 ## The three rules that decide everything here
 
 **A plugin, not a platform module.** Studio does not ship, resolve or depend on this artifact. That is why

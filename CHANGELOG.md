@@ -7,6 +7,39 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+### Added
+
+- **`@Param`** (`com.botmaker.plugin.basics.params.Param`) — a user parameter is a field in the bot's own
+  Java now, not a row in a JSON file read back by name:
+
+  ```java
+  @Param(category = "Limits", min = "1", max = "50")
+  public static int maxAttempts = 10;
+  ```
+
+  The bot reads `Parameters.maxAttempts`, so a misspelling is a compile error and the type is the type.
+  Studio reads the same fields off the syntax tree and draws the Parameters window from them. The members
+  are `category` (free text — the six SDK categories were a vocabulary), `description`, `visibility`
+  (`Param.EDITOR` or `Param.PUBLIC`, strings because the contract's `Visibility` is off a bot's classpath),
+  `min`, `max` and `options`.
+- **`PluginStore`** — a plugin's own state as the plugin's own records, one line each way:
+  `store.write("capture", targets)` and `store.read("capture", Targets.class)`, over `PluginData`'s file
+  tree with Jackson. Reading is total (absent, unparseable, wrongly shaped and `{}` all read as empty);
+  writing throws, because a save that silently did not happen is the one failure a user cannot see. A field
+  the record no longer declares is ignored, so a plugin can still read what an older version of itself
+  wrote.
+- **`Settings.forPlugin(id)`** — the same files from inside a running bot, read by one resolved classpath
+  path. `read(name, Class)` and `readAll(name, Class)`, same rules.
+
+### Changed
+
+- **`Settings.load`/`loadAll`/`declares` are for a *plugin's* rows now** — activity enable flags and
+  whatever a plugin declares for itself. They are unchanged and never deleted (a bot compiled against them
+  cannot be rewritten); what changed is that a *user* parameter is no longer one of them. The javadoc says
+  so at the top of the class.
+
 ## [0.0.1] — 2026-09-16
 
 ### Added

@@ -1,14 +1,24 @@
 package com.botmaker.plugin.basics.store;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceLoader;
 
 /**
- * What a bot reads its own parameters through.
+ * What a bot reads a <b>plugin's</b> parameters through.
+ *
+ * <p><b>Since 2026-09-17 this is not where a bot's own parameters live.</b> A user parameter is a
+ * {@code @}{@link com.botmaker.plugin.basics.params.Param} field in the bot's own Java — a field, so a
+ * misspelling is a compile error and the type is the type, which is exactly what the table of total answers
+ * below cannot give. Everything here is kept and keeps working (never-delete: a bot compiled against it
+ * cannot be rewritten), and what it now reads is a <em>plugin's</em> rows: activity enable flags, and
+ * whatever else a plugin declares for itself.
  *
  * <pre>{@code
  * Duration   wait  = Settings.load("wait", Duration.class);
@@ -125,6 +135,72 @@ public final class Settings {
      */
     public static boolean enabled(String activity) {
         return ProjectValues.current().enabled(activity);
+    }
+
+    /**
+     * A plugin's own stored state, as the plugin's own records — the bot side of {@link PluginStore}.
+     *
+     * <pre>{@code
+     * record CaptureTargets(String window, List<String> images) {}
+     *
+     * CaptureTargets targets = Settings.forPlugin(MyPlugin.ID)
+     *         .read("capture", CaptureTargets.class)
+     *         .orElse(CaptureTargets.NONE);
+     * }</pre>
+     *
+     * <p>Same file, same mapper, same rules as the editor's side: absent, unparseable and shaped-wrong all
+     * read as empty. The difference is where it reads from — <b>the classpath, by one resolved path</b>,
+     * because a bot has no project directory and enumerates nothing.
+     *
+     * <p><b>This is not how a bot reads a user parameter.</b> A user parameter is a {@code @Param} field in
+     * the bot's own Java; this is a plugin's state, which the bot reads only if the plugin's runtime half
+     * gives it a reason to.
+     */
+    public static Plugin forPlugin(String pluginId) {
+        return new Plugin(pluginId);
+    }
+
+    /**
+     * One plugin's stored files, read off this bot's classpath.
+     *
+     * <p>A handle rather than static methods taking an id, so a caller names the plugin once — a bot that
+     * repeated the id at every call would eventually repeat it wrongly, and a misspelled id reads as empty
+     * exactly like a plugin that has stored nothing.
+     */
+    public static final class Plugin {
+
+        private final String pluginId;
+
+        private Plugin(String pluginId) {
+            this.pluginId = pluginId;
+        }
+
+        /** The plugin whose files this reads. */
+        public String pluginId() {
+            return pluginId;
+        }
+
+        /** What the plugin stored under {@code name}, as {@code type}, or empty. */
+        public <T> Optional<T> read(String name, Class<T> type) {
+            return PluginStore.convert(document(name), type);
+        }
+
+        /** The list the plugin stored under {@code name}, or empty — a non-array document reads as empty. */
+        public <T> List<T> readAll(String name, Class<T> type) {
+            JsonNode root = document(name);
+            if (root == null || !root.isArray()) {
+                return List.of();
+            }
+            List<T> out = new ArrayList<>(root.size());
+            for (JsonNode element : root) {
+                PluginStore.convert(element, type).ifPresent(out::add);
+            }
+            return List.copyOf(out);
+        }
+
+        private JsonNode document(String name) {
+            return ProjectStore.load(PluginData.resource(pluginId, name)).root();
+        }
     }
 
     /**
