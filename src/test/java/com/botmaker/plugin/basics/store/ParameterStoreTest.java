@@ -1,6 +1,5 @@
 package com.botmaker.plugin.basics.store;
 
-import com.botmaker.plugin.api.ParameterDeclaration;
 import com.botmaker.plugin.api.ParameterEdit;
 import com.botmaker.plugin.api.ParameterRow;
 import com.botmaker.plugin.api.value.Range;
@@ -345,102 +344,10 @@ class ParameterStoreTest {
         assertEquals(before, Files.readString(file(dir)));
     }
 
-    // ---- the one contract call the verbs above are the implementation of --------------------------------
-
-    /** A declaration against a row nothing holds is an add, whatever the host believed. */
-    @Test
-    void declaringARowThatIsNotHereAddsIt(@TempDir Path dir) {
-        ParameterRow wanted = ParameterRow.named("retries", ValueChoice.of(WHOLE))
-                .value("3").description("How many tries").category("Timing")
-                .visibility(Visibility.EDITOR_ONLY).bounds(new Range("1", "5")).build();
-
-        ParameterRow stored = over(dir).declared(ParameterDeclaration.added(OURS, wanted)).orElseThrow();
-
-        assertEquals("retries", stored.name());
-        assertEquals("3", stored.singleValue());
-        assertEquals("Timing", stored.category());
-        assertEquals(Visibility.EDITOR_ONLY, stored.visibility());
-        assertEquals(new Range("1", "5"), stored.bounds());
-    }
-
-    /** Two names in one declaration is a rename, and everything else in the row lands with it. */
-    @Test
-    void aDeclarationWhoseTwoNamesDifferRenames(@TempDir Path dir) {
-        retries(dir);
-        ParameterRow wanted = over(dir).rows(OURS).getFirst().toBuilder().build();
-
-        ParameterRow stored = over(dir).declared(new ParameterDeclaration(OURS, "retries",
-                copyNamed(wanted, "attempts"))).orElseThrow();
-
-        assertEquals("attempts", stored.name());
-        assertEquals(List.of("attempts"), over(dir).rows(OURS).stream().map(ParameterRow::name).toList());
-    }
-
-    /**
-     * A window retyping a row hands back the row it is showing, whose value is still the old type's text.
-     * The reset is this store's rule and wins over that.
-     */
-    @Test
-    void aDeclarationThatOnlyRetypesStillResetsTheValue(@TempDir Path dir) {
-        retries(dir);
-        ParameterRow showing = over(dir).rows(OURS).getFirst();
-
-        ParameterRow stored = over(dir).declared(ParameterDeclaration.of(OURS,
-                retyped(showing, ValueChoice.of(TEXT)))).orElseThrow();
-
-        assertEquals(TEXT.id(), stored.type().type().id());
-        assertEquals("", stored.singleValue(), "the old type's text is not carried across");
-        assertTrue(stored.bounds().isEmpty());
-    }
-
-    /**
-     * An undo is a declaration too, and it puts the old type <em>and</em> its old value back — which is why
-     * a value the host actually changed is applied even across a retype.
-     */
-    @Test
-    void aDeclarationCarryingBothAnOldTypeAndItsOldValuePutsBothBack(@TempDir Path dir) {
-        retries(dir);
-        ParameterRow before = over(dir).rows(OURS).getFirst();
-        over(dir).declared(ParameterDeclaration.of(OURS, retyped(before, ValueChoice.of(TEXT))));
-
-        ParameterRow back = over(dir).declared(ParameterDeclaration.of(OURS, before)).orElseThrow();
-
-        assertEquals("WHOLE_NUMBER", back.type().type().id());
-        assertEquals("2", back.singleValue());
-        assertEquals(new Range("1", "5"), back.bounds());
-    }
-
-    @Test
-    void aDeclarationWithNoRowRemoves(@TempDir Path dir) {
-        retries(dir);
-
-        assertEquals(Optional.empty(), over(dir).declared(ParameterDeclaration.removed(OURS, "retries")));
-        assertEquals(List.of(), over(dir).rows(OURS));
-    }
-
-    /** Empty is also how a refusal and a group this store does not own read — the host redraws either way. */
-    @Test
-    void aDeclarationForAnotherGroupOrARefusedNameIsEmpty(@TempDir Path dir) {
-        retries(dir);
-        ParameterRow taken = ParameterRow.named("retries", ValueChoice.of(TEXT)).build();
-
-        assertEquals(Optional.empty(), over(dir).declared(ParameterDeclaration.added("discord", taken)));
-        assertEquals(Optional.empty(), over(dir).declared(ParameterDeclaration.added(OURS, taken)));
-        assertEquals(1, over(dir).rows(OURS).size());
-        assertEquals("WHOLE_NUMBER", over(dir).rows(OURS).getFirst().type().type().id());
-    }
-
-    private static ParameterRow copyNamed(ParameterRow row, String name) {
-        return ParameterRow.named(name, row.type()).value(row.value()).description(row.description())
-                .category(row.category()).visibility(row.visibility()).options(row.options())
-                .bounds(row.bounds()).build();
-    }
-
-    private static ParameterRow retyped(ParameterRow row, ValueChoice type) {
-        return ParameterRow.named(row.name(), type).value(row.value()).description(row.description())
-                .category(row.category()).visibility(row.visibility()).options(row.options())
-                .bounds(row.bounds()).build();
-    }
+    // Six tests of declared(ParameterDeclaration) stood here until 2026-09-17 — an add, a rename, a retype's
+    // reset, an undo putting a type and its value back, a removal, a refusal. They went with the method: the
+    // host no longer declares a row here, because a user parameter is a @Param field in the bot's own Java.
+    // The verbs those tests reached through are still covered one at a time above.
 
     /** What a bot reads is the same file, resolved from the id and the name, and answered as text. */
     @Test

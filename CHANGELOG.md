@@ -41,6 +41,12 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **`ParameterStore.declared(ParameterDeclaration)` is gone**, with the contract method it implemented
+  (studio-api, 2026-09-17). The nine verbs it reconciled through — `declare`, `remove`, `rename`, `retype`,
+  `setOptions`, `setBounds`, `setCategory`, `setVisibility`, `setDescription` — are unchanged and still
+  public: a plugin declares its own rows by calling them, which is what they were the implementation of all
+  along. What is gone is the wire form for a *host* asking, because a user parameter is a `@Param` field in
+  the bot's own Java now and the host edits it there.
 - **`Settings.load`/`loadAll`/`declares` are for a *plugin's* rows now** — activity enable flags and
   whatever a plugin declares for itself. They are unchanged and never deleted (a bot compiled against them
   cannot be rewritten); what changed is that a *user* parameter is no longer one of them. The javadoc says
