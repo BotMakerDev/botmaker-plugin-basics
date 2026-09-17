@@ -8,6 +8,7 @@ import com.botmaker.plugin.toolkit.Source;
 import java.awt.Color;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -93,17 +94,34 @@ public final class BasicsValueTypes {
      * and labels with, then the three time types.
      */
     public static final ValueCatalog CATALOG = ValueCatalog.builder()
-            .add(TEXT, codec(JdkText::text, s -> s, BasicsValueTypes::quote))
-            .add(YES_NO, codec(JdkText::flag, b -> Boolean.toString(b), b -> Boolean.toString(b)))
-            .add(WHOLE_NUMBER, codec(JdkText::whole, i -> Integer.toString(i), i -> Integer.toString(i)))
-            .add(DECIMAL_NUMBER, codec(JdkText::decimal, d -> Double.toString(d), d -> Double.toString(d)))
-            .add(CHARACTER, codec(JdkText::letter, String::valueOf, BasicsValueTypes::quoteChar))
-            .add(COLOR, codec(JdkText::color, JdkText::spellColor, BasicsValueTypes::colorLiteral))
-            .add(DATE, codec(JdkText::date, LocalDate::toString, BasicsValueTypes::dateLiteral))
-            .add(TIME_OF_DAY, codec(JdkText::time, LocalTime::toString, BasicsValueTypes::timeLiteral))
+            .add(TEXT, codec(JdkText::text, s -> s, BasicsValueTypes::quote, BasicsValueTypes::unquote))
+            .add(YES_NO, codec(JdkText::flag, b -> Boolean.toString(b), b -> Boolean.toString(b),
+                    java -> "true".equals(java) || "false".equals(java)
+                            ? Optional.of(java) : Optional.empty()))
+            .add(WHOLE_NUMBER, codec(JdkText::whole, i -> Integer.toString(i), i -> Integer.toString(i),
+                    java -> integer(java)
+                            .filter(n -> n == n.intValue())
+                            .map(n -> Integer.toString(n.intValue()))))
+            .add(DECIMAL_NUMBER, codec(JdkText::decimal, d -> Double.toString(d), d -> Double.toString(d),
+                    java -> {
+                        try {
+                            return Optional.of(Double.toString(Double.parseDouble(java)));
+                        } catch (NumberFormatException notANumber) {
+                            return Optional.empty();
+                        }
+                    }))
+            .add(CHARACTER, codec(JdkText::letter, String::valueOf, BasicsValueTypes::quoteChar,
+                    java -> unquoteChar(java).map(String::valueOf)))
+            .add(COLOR, codec(JdkText::color, JdkText::spellColor, BasicsValueTypes::colorLiteral,
+                    BasicsValueTypes::wireOfColor))
+            .add(DATE, codec(JdkText::date, LocalDate::toString, BasicsValueTypes::dateLiteral,
+                    BasicsValueTypes::wireOfDate))
+            .add(TIME_OF_DAY, codec(JdkText::time, LocalTime::toString, BasicsValueTypes::timeLiteral,
+                    BasicsValueTypes::wireOfTime))
             .add(DURATION, codec(JdkText::duration,
                     d -> JdkText.spellDuration(d.toMillis()),
-                    d -> "java.time.Duration.ofMillis(" + d.toMillis() + "L)"))
+                    d -> "java.time.Duration.ofMillis(" + d.toMillis() + "L)",
+                    BasicsValueTypes::wireOfDuration))
             .build();
 
     // ---- literals -------------------------------------------------------------------------------------
@@ -147,6 +165,19 @@ public final class BasicsValueTypes {
 
     private static <T> ValueCodec<T> codec(Function<String, T> parse, Function<T, String> store,
                                            Function<T, String> literal) {
+        return codec(parse, store, literal, java -> Optional.empty());
+    }
+
+    /**
+     * The four-argument form, for a type that can also read its own {@link ValueCodec#literal} back.
+     *
+     * <p>Every one of the nine can, and none of them does it by chance: the inverse is written next to the
+     * literal it undoes, in the same expression, because the two are one fact and a pair that drifts is a
+     * value the editor writes and then refuses to edit.
+     */
+    private static <T> ValueCodec<T> codec(Function<String, T> parse, Function<T, String> store,
+                                           Function<T, String> literal,
+                                           Function<String, Optional<String>> wireOfLiteral) {
         return new ValueCodec<>() {
             @Override
             public T parse(String wire) {
@@ -162,6 +193,135 @@ public final class BasicsValueTypes {
             public String literal(T value) {
                 return literal.apply(value);
             }
+
+            @Override
+            public Optional<String> wireOfLiteral(String javaSource) {
+                return javaSource == null ? Optional.empty() : wireOfLiteral.apply(javaSource.strip());
+            }
         };
+    }
+
+    // ---- the inverses ---------------------------------------------------------------------------------
+    //
+    // Each one recognises exactly what its literal writes, and declines everything else — including a
+    // spelling that means the same thing. `Duration.ofSeconds(3)` is not what this plugin emits, so it
+    // reads as a hand-written initialiser and is shown read-only rather than silently rewritten into the
+    // canonical form the moment somebody opens the window. Recognising more would be recognising *other
+    // people's* Java, which is a parser's job and not a codec's.
+
+    /** Unwraps a call this plugin writes, {@code Prefix(args)} → {@code args}, or empty. */
+    private static Optional<String> arguments(String java, String prefix) {
+        if (!java.startsWith(prefix) || !java.endsWith(")")) return Optional.empty();
+        return Optional.of(java.substring(prefix.length(), java.length() - 1).strip());
+    }
+
+    /** The content of a Java string literal, or empty when the source is not one. */
+    private static Optional<String> unquote(String java) {
+        if (java.length() < 2 || java.charAt(0) != '"' || !java.endsWith("\"")) return Optional.empty();
+        String body = java.substring(1, java.length() - 1);
+        StringBuilder out = new StringBuilder(body.length());
+        for (int i = 0; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c != '\\') {
+                if (c == '"') return Optional.empty();        // an unescaped quote: not one literal
+                out.append(c);
+                continue;
+            }
+            if (++i >= body.length()) return Optional.empty();
+            char escaped = body.charAt(i);
+            switch (escaped) {
+                case 'n' -> out.append('\n');
+                case 't' -> out.append('\t');
+                case 'r' -> out.append('\r');
+                case 'b' -> out.append('\b');
+                case 'f' -> out.append('\f');
+                case 's' -> out.append(' ');
+                case '0' -> out.append('\0');
+                case '\\', '"', '\'' -> out.append(escaped);
+                default -> {
+                    return Optional.empty();                  // \\u…, an octal escape: not ours to read
+                }
+            }
+        }
+        return Optional.of(out.toString());
+    }
+
+    /** The character of a Java char literal, or empty. The escapes are {@link #quoteChar}'s own. */
+    private static Optional<Character> unquoteChar(String java) {
+        if (java.length() < 3 || java.charAt(0) != '\'' || !java.endsWith("'")) return Optional.empty();
+        String body = java.substring(1, java.length() - 1);
+        if (body.length() == 1 && body.charAt(0) != '\\') return Optional.of(body.charAt(0));
+        if (body.length() != 2 || body.charAt(0) != '\\') return Optional.empty();
+        return switch (body.charAt(1)) {
+            case 'n' -> Optional.of('\n');
+            case 't' -> Optional.of('\t');
+            case 'r' -> Optional.of('\r');
+            case 'b' -> Optional.of('\b');
+            case 'f' -> Optional.of('\f');
+            case 's' -> Optional.of(' ');
+            case '0' -> Optional.of('\0');
+            case '\\', '\'', '"' -> Optional.of(body.charAt(1));
+            default -> Optional.empty();
+        };
+    }
+
+    /** The {@code n} of an integer literal, tolerating a trailing {@code L}, or empty. */
+    private static Optional<Long> integer(String java) {
+        String digits = java.endsWith("L") || java.endsWith("l")
+                ? java.substring(0, java.length() - 1) : java;
+        try {
+            return Optional.of(Long.parseLong(digits.strip()));
+        } catch (NumberFormatException notANumber) {
+            return Optional.empty();
+        }
+    }
+
+    /** The comma-separated integer arguments of a call, exactly {@code count} of them, or empty. */
+    private static Optional<int[]> integers(String arguments, int count) {
+        String[] parts = arguments.split(",", -1);
+        if (parts.length != count) return Optional.empty();
+        int[] out = new int[count];
+        for (int i = 0; i < count; i++) {
+            Optional<Long> value = integer(parts[i].strip());
+            if (value.isEmpty() || value.get() != value.get().intValue()) return Optional.empty();
+            out[i] = value.get().intValue();
+        }
+        return Optional.of(out);
+    }
+
+    private static Optional<String> wireOfColor(String java) {
+        return arguments(java, "new java.awt.Color(")
+                .flatMap(args -> integers(args, 3))
+                .map(rgb -> JdkText.spellColor(new Color(rgb[0], rgb[1], rgb[2])));
+    }
+
+    private static Optional<String> wireOfDate(String java) {
+        return arguments(java, "java.time.LocalDate.of(")
+                .flatMap(args -> integers(args, 3))
+                .flatMap(ymd -> {
+                    try {
+                        return Optional.of(LocalDate.of(ymd[0], ymd[1], ymd[2]).toString());
+                    } catch (RuntimeException impossibleDate) {
+                        return Optional.empty();
+                    }
+                });
+    }
+
+    private static Optional<String> wireOfTime(String java) {
+        return arguments(java, "java.time.LocalTime.of(")
+                .flatMap(args -> integers(args, 3))
+                .flatMap(hms -> {
+                    try {
+                        return Optional.of(LocalTime.of(hms[0], hms[1], hms[2]).toString());
+                    } catch (RuntimeException impossibleTime) {
+                        return Optional.empty();
+                    }
+                });
+    }
+
+    private static Optional<String> wireOfDuration(String java) {
+        return arguments(java, "java.time.Duration.ofMillis(")
+                .flatMap(BasicsValueTypes::integer)
+                .map(JdkText::spellDuration);
     }
 }

@@ -32,6 +32,12 @@ heading in that module's own release commit.
   wrote.
 - **`Settings.forPlugin(id)`** — the same files from inside a running bot, read by one resolved classpath
   path. `read(name, Class)` and `readAll(name, Class)`, same rules.
+- **The nine types read their own Java back** (`ValueCodec.wireOfLiteral`, new in the contract). A
+  `@Param` field's value *is* its initialiser, so a type that can write `java.time.Duration.ofMillis(3000L)`
+  and not read it would be one the editor writes and then refuses to edit. Each inverse is written in the
+  same expression as the literal it undoes, and recognises **only** what this plugin emits:
+  `Duration.ofSeconds(3)` means the same thing and is declined, because the author wrote that on purpose and
+  the window shows it as written rather than rewriting it on open.
 
 ### Changed
 
