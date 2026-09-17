@@ -7,7 +7,7 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
-## [Unreleased]
+## [0.0.2] — 2026-09-17
 
 ### Added
 
