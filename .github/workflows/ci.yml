@@ -25,14 +25,14 @@ jobs:
       - name: Check out botmaker-studio-api
         uses: actions/checkout@v7
         with:
-          repository: LiQiyeDev/botmaker-studio-api
+          repository: BotMakerDev/botmaker-studio-api
           path: .deps/botmaker-studio-api
 
       # The widget kit, at `compile` scope: this plugin ships with it on its own classloader.
       - name: Check out botmaker-plugin-toolkit
         uses: actions/checkout@v7
         with:
-          repository: LiQiyeDev/botmaker-plugin-toolkit
+          repository: BotMakerDev/botmaker-plugin-toolkit
           path: .deps/botmaker-plugin-toolkit
 
       - uses: actions/setup-java@v6

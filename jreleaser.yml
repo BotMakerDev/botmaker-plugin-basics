@@ -33,7 +33,7 @@ project:
   copyright: LiQiyeDev
   inceptionYear: '2026'
   links:
-    homepage: https://github.com/LiQiyeDev/botmaker-plugin-basics
+    homepage: https://github.com/BotMakerDev/botmaker-plugin-basics
   languages:
     java:
       groupId: com.github.LiQiyeDev
@@ -42,7 +42,7 @@ project:
 
 release:
   github:
-    owner: LiQiyeDev
+    owner: BotMakerDev
     name: botmaker-plugin-basics
     tagName: 'v{{projectVersion}}'
     releaseName: 'v{{projectVersion}}'
