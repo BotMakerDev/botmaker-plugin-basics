@@ -7,6 +7,59 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.0.5; re-released for updated upstream pins.
+
+No source changes since v0.0.4; re-released for updated upstream pins.
+
+No source changes since v0.0.3; re-released for updated upstream pins.
+
+No source changes since v0.0.2; re-released for updated upstream pins.
+
+### Added
+
+- **`@Param`** (`com.botmaker.plugin.basics.params.Param`) — a user parameter is a field in the bot's own
+  Java now, not a row in a JSON file read back by name:
+
+  ```java
+  @Param(category = "Limits", min = "1", max = "50")
+  public static int maxAttempts = 10;
+  ```
+
+  The bot reads `Parameters.maxAttempts`, so a misspelling is a compile error and the type is the type.
+  Studio reads the same fields off the syntax tree and draws the Parameters window from them. The members
+  are `category` (free text — the six SDK categories were a vocabulary), `description`, `visibility`
+  (`Param.EDITOR` or `Param.PUBLIC`, strings because the contract's `Visibility` is off a bot's classpath),
+  `min`, `max` and `options`.
+- **`PluginStore`** — a plugin's own state as the plugin's own records, one line each way:
+  `store.write("capture", targets)` and `store.read("capture", Targets.class)`, over `PluginData`'s file
+  tree with Jackson. Reading is total (absent, unparseable, wrongly shaped and `{}` all read as empty);
+  writing throws, because a save that silently did not happen is the one failure a user cannot see. A field
+  the record no longer declares is ignored, so a plugin can still read what an older version of itself
+  wrote.
+- **`Settings.forPlugin(id)`** — the same files from inside a running bot, read by one resolved classpath
+  path. `read(name, Class)` and `readAll(name, Class)`, same rules.
+- **The nine types read their own Java back** (`ValueCodec.wireOfLiteral`, new in the contract). A
+  `@Param` field's value *is* its initialiser, so a type that can write `java.time.Duration.ofMillis(3000L)`
+  and not read it would be one the editor writes and then refuses to edit. Each inverse is written in the
+  same expression as the literal it undoes, and recognises **only** what this plugin emits:
+  `Duration.ofSeconds(3)` means the same thing and is declined, because the author wrote that on purpose and
+  the window shows it as written rather than rewriting it on open.
+
+### Changed
+
+- **`ParameterStore.declared(ParameterDeclaration)` is gone**, with the contract method it implemented
+  (studio-api, 2026-09-17). The nine verbs it reconciled through — `declare`, `remove`, `rename`, `retype`,
+  `setOptions`, `setBounds`, `setCategory`, `setVisibility`, `setDescription` — are unchanged and still
+  public: a plugin declares its own rows by calling them, which is what they were the implementation of all
+  along. What is gone is the wire form for a *host* asking, because a user parameter is a `@Param` field in
+  the bot's own Java now and the host edits it there.
+- **`Settings.load`/`loadAll`/`declares` are for a *plugin's* rows now** — activity enable flags and
+  whatever a plugin declares for itself. They are unchanged and never deleted (a bot compiled against them
+  cannot be rewritten); what changed is that a *user* parameter is no longer one of them. The javadoc says
+  so at the top of the class.
+
 ## [0.0.5] — 2026-09-19
 
 No source changes since v0.0.4; re-released for updated upstream pins.
