@@ -17,6 +17,20 @@ No source changes since v0.0.3; re-released for updated upstream pins.
 
 No source changes since v0.0.2; re-released for updated upstream pins.
 
+### Added
+
+- **`@Managed("id")`**, in the new `com.botmaker.plugin.basics.managed` package, beside `@Param` and for the
+  same reason: a bot has no contract jar, so the marker a plugin's values are found by has to live where a
+  bot can see it. On a **method** it says the expression that method returns is a value the plugin's own
+  window edits — BotMaker rewrites that one expression and nothing else, so the file's comments, helpers and
+  formatting survive a save. On a **class** it says the whole class is the plugin's, which is the shape for
+  a set the user grows (one constant per captured picture). A body that is not exactly one
+  `return <expression>;` is shown read-only with the reason and never rewritten.
+
+  This is where `plugins/<id prefix>/<last segment>/<name>.json` goes. A name renamed in Java is a compile
+  error; the same rename against JSON was a silently empty value three screens into a run. `Settings` stays
+  for a plugin's flags and its own files.
+
 ### Changed
 
 - **`ParameterStore`'s verbs take a `ValueForm`.** `declare`, `retype`, `normalize`, `normalizeOptions` and
