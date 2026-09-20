@@ -4,8 +4,7 @@ import com.botmaker.plugin.api.ParameterEdit;
 import com.botmaker.plugin.api.ParameterRow;
 import com.botmaker.plugin.api.value.Range;
 import com.botmaker.plugin.api.value.ValueCatalog;
-import com.botmaker.plugin.api.value.ValueChoice;
-import com.botmaker.plugin.api.value.ValueShape;
+import com.botmaker.plugin.api.value.ValueForm;
 import com.botmaker.plugin.api.value.ValueType;
 import com.botmaker.plugin.api.value.Visibility;
 import com.botmaker.plugin.basics.values.BasicsValueTypes;
@@ -59,7 +58,7 @@ class ParameterStoreTest {
     /** {@code retries}: a bounded whole number with every optional component set to something. */
     private static ParameterRow retries(Path dir) {
         ParameterStore ours = over(dir);
-        ours.declare("retries", ValueChoice.of(WHOLE));
+        ours.declare("retries", ValueForm.of(WHOLE));
         ours.setBounds("retries", new Range("1", "5"));
         ours.setCategory("retries", "Timing");
         ours.setVisibility("retries", Visibility.EDITOR_ONLY);
@@ -74,7 +73,7 @@ class ParameterStoreTest {
         ParameterRow row = over(dir).rows(OURS).getFirst();
 
         assertEquals("retries", row.name());
-        assertEquals("WHOLE_NUMBER", row.type().type().id());
+        assertEquals("WHOLE_NUMBER", row.form().leaf().id());
         assertEquals("2", row.value());
         assertEquals("How many tries", row.description());
         assertEquals("Timing", row.category());
@@ -94,7 +93,7 @@ class ParameterStoreTest {
     @Test
     void anotherGroupsRowInTheSameFileIsNotOurs(@TempDir Path dir) {
         retries(dir);
-        store(dir, "discord").declare("channel", ValueChoice.of(TEXT));
+        store(dir, "discord").declare("channel", ValueForm.of(TEXT));
 
         List<ParameterRow> ours = over(dir).rows(OURS);
 
@@ -107,7 +106,7 @@ class ParameterStoreTest {
     /** And no verb here may touch it — the rule the withdrawn sectioned file had between plugins. */
     @Test
     void anotherGroupsRowIsUntouchableFromHere(@TempDir Path dir) {
-        store(dir, "discord").declare("channel", ValueChoice.of(TEXT));
+        store(dir, "discord").declare("channel", ValueForm.of(TEXT));
 
         assertTrue(over(dir).rename("channel", "room").isEmpty());
         assertFalse(over(dir).remove("channel"));
@@ -172,7 +171,7 @@ class ParameterStoreTest {
      */
     @Test
     void aListShapedRowCrossesAsOneInitializer(@TempDir Path dir) throws IOException {
-        over(dir).declare("hotkeys", ValueChoice.listOf(TEXT));
+        over(dir).declare("hotkeys", ValueForm.listOf(ValueForm.of(TEXT)));
         over(dir).apply(new ParameterEdit(OURS, "hotkeys", "java.util.List.of(\"F1\", \"F2\")"));
 
         assertEquals("java.util.List.of(\"F1\", \"F2\")", over(dir).rows(OURS).getFirst().value());
@@ -183,26 +182,26 @@ class ParameterStoreTest {
                 .orElseThrow();
 
         assertEquals("java.util.List.of(\"F1\", \"F2\", \"F3\")", stored.value());
-        assertTrue(stored.type().isList());
+        assertEquals("java.util.List<String>", stored.form().sourceName());
     }
 
     // ---- the declaration verbs, and the coercion that comes with being the editor ------------------------
 
     @Test
     void aDeclaredParameterIsSeededWithItsTypesDefault(@TempDir Path dir) {
-        ParameterRow fresh = over(dir).declare("retries", ValueChoice.of(WHOLE)).orElseThrow();
+        ParameterRow fresh = over(dir).declare("retries", ValueForm.of(WHOLE)).orElseThrow();
 
         assertEquals("0", fresh.value(), "a seeded value has to be one the bot can compile");
         assertEquals("retries", over(dir).rows(OURS).getFirst().name());
         // A list has no items until the user adds one; seeding one would put a blank row in every new list.
         assertEquals("java.util.List.of()",
-                over(dir).declare("keys", ValueChoice.listOf(TEXT)).orElseThrow().value());
+                over(dir).declare("keys", ValueForm.listOf(ValueForm.of(TEXT))).orElseThrow().value());
     }
 
     /** Declaring is the one verb that has to work on a project whose file does not exist yet. */
     @Test
     void declaringCreatesTheFileOnDemand(@TempDir Path dir) {
-        assertTrue(over(dir).declare("retries", ValueChoice.of(WHOLE)).isPresent());
+        assertTrue(over(dir).declare("retries", ValueForm.of(WHOLE)).isPresent());
 
         assertTrue(Files.isRegularFile(file(dir)), "the folders were not created on the way");
         assertEquals(1, over(dir).rows(OURS).size());
@@ -213,19 +212,19 @@ class ParameterStoreTest {
         retries(dir);
         ParameterStore ours = over(dir);
 
-        assertTrue(ours.declare("retries", ValueChoice.of(WHOLE)).isEmpty(), "already taken here");
-        assertTrue(ours.declare("2fast", ValueChoice.of(TEXT)).isEmpty(), "not an identifier");
-        assertTrue(ours.declare("has space", ValueChoice.of(TEXT)).isEmpty());
-        assertTrue(ours.declare(" ", ValueChoice.of(TEXT)).isEmpty());
+        assertTrue(ours.declare("retries", ValueForm.of(WHOLE)).isEmpty(), "already taken here");
+        assertTrue(ours.declare("2fast", ValueForm.of(TEXT)).isEmpty(), "not an identifier");
+        assertTrue(ours.declare("has space", ValueForm.of(TEXT)).isEmpty());
+        assertTrue(ours.declare(" ", ValueForm.of(TEXT)).isEmpty());
         assertEquals(1, ours.rows(OURS).size(), "a refusal writes nothing");
     }
 
     /** One name may be taken once per group, which is what lets two windows both offer a {@code timeout}. */
     @Test
     void oneNameIsFreeAgainInAnotherGroup(@TempDir Path dir) {
-        over(dir).declare("timeout", ValueChoice.of(WHOLE));
+        over(dir).declare("timeout", ValueForm.of(WHOLE));
 
-        assertTrue(store(dir, "discord").declare("timeout", ValueChoice.of(WHOLE)).isPresent());
+        assertTrue(store(dir, "discord").declare("timeout", ValueForm.of(WHOLE)).isPresent());
         assertEquals(1, over(dir).rows(OURS).size());
         assertEquals(1, store(dir, "discord").rows("discord").size());
     }
@@ -242,7 +241,7 @@ class ParameterStoreTest {
     @Test
     void renamingRefusesANameAlreadyTakenHere(@TempDir Path dir) {
         retries(dir);
-        over(dir).declare("rest", ValueChoice.of(TEXT));
+        over(dir).declare("rest", ValueForm.of(TEXT));
 
         assertEquals("attempts", over(dir).rename("retries", "attempts").orElseThrow().name());
         assertTrue(over(dir).rename("attempts", "rest").isEmpty());
@@ -270,30 +269,31 @@ class ParameterStoreTest {
     void retypingResetsTheValueAndDropsTheBounds(@TempDir Path dir) {
         retries(dir);
 
-        ParameterRow retyped = over(dir).retype("retries", ValueChoice.of(TEXT)).orElseThrow();
+        ParameterRow retyped = over(dir).retype("retries", ValueForm.of(TEXT)).orElseThrow();
 
-        assertEquals(TEXT.id(), retyped.type().type().id());
+        assertEquals(TEXT.id(), retyped.form().leaf().id());
         assertEquals("\"\"", retyped.value(), "the empty text, written as the Java that produces it");
         assertTrue(retyped.bounds().isEmpty());
     }
 
-    /** Options survive a change of shape over one base type, and never a change of base type. */
+    /** Options survive a change of container over one leaf type, and never a change of leaf. */
     @Test
-    void declaredOptionsSurviveAShapeChangeAndNotATypeChange(@TempDir Path dir) {
-        over(dir).declare("mode", new ValueChoice(TEXT, ValueShape.ONE_OF));
+    void declaredOptionsSurviveAContainerChangeAndNotATypeChange(@TempDir Path dir) {
+        over(dir).declare("mode", ValueForm.of(TEXT));
         over(dir).setOptions("mode", List.of("fast", "safe"));
 
-        ParameterRow many = over(dir).retype("mode", new ValueChoice(TEXT, ValueShape.ANY_OF)).orElseThrow();
+        ParameterRow many = over(dir)
+                .retype("mode", ValueForm.listOf(ValueForm.of(TEXT))).orElseThrow();
         assertEquals(List.of("fast", "safe"), many.options());
 
-        ParameterRow asNumber = over(dir).retype("mode", ValueChoice.of(WHOLE)).orElseThrow();
+        ParameterRow asNumber = over(dir).retype("mode", ValueForm.of(WHOLE)).orElseThrow();
         assertEquals(List.of(), asNumber.options(), "they are not values of the new type");
     }
 
     /** An option the author has just deleted must stop being a stored value. */
     @Test
     void replacingTheOptionsPrunesTheValue(@TempDir Path dir) {
-        over(dir).declare("mode", new ValueChoice(TEXT, ValueShape.ONE_OF));
+        over(dir).declare("mode", ValueForm.of(TEXT));
         over(dir).setOptions("mode", List.of("fast", "safe"));
         over(dir).apply(ParameterEdit.of(OURS, "mode", "\"safe\""));
 
@@ -306,7 +306,7 @@ class ParameterStoreTest {
     /** A range is advice and a clamp, never a validation that can fail. */
     @Test
     void declaringARangePullsTheValueIntoIt(@TempDir Path dir) {
-        over(dir).declare("retries", ValueChoice.of(WHOLE));
+        over(dir).declare("retries", ValueForm.of(WHOLE));
         over(dir).apply(ParameterEdit.of(OURS, "retries", "900"));
 
         assertEquals("5", over(dir).setBounds("retries", new Range("1", "5")).orElseThrow().value());
@@ -317,7 +317,7 @@ class ParameterStoreTest {
     /** The editor's rules run on the way in, so a value is canonicalised rather than stored as typed. */
     @Test
     void aValueIsCanonicalisedByItsOwnType(@TempDir Path dir) {
-        over(dir).declare("retries", ValueChoice.of(WHOLE));
+        over(dir).declare("retries", ValueForm.of(WHOLE));
 
         assertEquals("7", over(dir).apply(ParameterEdit.of(OURS, "retries", " 7 ")).orElseThrow()
                 .value());
@@ -343,7 +343,7 @@ class ParameterStoreTest {
         String before = Files.readString(file(dir));
 
         assertTrue(ours.rename("nobody", "somebody").isEmpty());
-        assertTrue(ours.retype("nobody", ValueChoice.of(TEXT)).isEmpty());
+        assertTrue(ours.retype("nobody", ValueForm.of(TEXT)).isEmpty());
         assertTrue(ours.setOptions("nobody", List.of("a")).isEmpty());
         assertTrue(ours.setBounds("nobody", new Range("1", "2")).isEmpty());
         assertTrue(ours.setCategory("nobody", "Timing").isEmpty());

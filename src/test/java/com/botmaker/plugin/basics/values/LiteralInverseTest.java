@@ -1,7 +1,7 @@
 package com.botmaker.plugin.basics.values;
 
 import com.botmaker.plugin.api.value.ValueCatalog;
-import com.botmaker.plugin.api.value.ValueChoice;
+import com.botmaker.plugin.api.value.ValueForm;
 import com.botmaker.plugin.api.value.ValueType;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LiteralInverseTest {
 
     private static final ValueCatalog CATALOG = BasicsValueTypes.CATALOG;
+
+    private static ValueForm one(ValueType type) {
+        return ValueForm.of(type);
+    }
+
+    private static ValueForm list(ValueType type) {
+        return ValueForm.listOf(ValueForm.of(type));
+    }
 
     /** Every type, every sample: {@code store(valueOfLiteral(literal(parse(wire))))} == {@code store(parse(wire))}. */
     @Test
@@ -54,36 +62,36 @@ class LiteralInverseTest {
                 new Sample(BasicsValueTypes.DURATION, "0s"));
 
         for (Sample sample : samples) {
-            ValueChoice choice = ValueChoice.of(sample.type());
+            ValueForm form = one(sample.type());
             String canonical = CATALOG.normalize(sample.type().id(), sample.wire());
-            String java = CATALOG.initializer(choice, List.of(sample.wire())).orElseThrow();
-            assertEquals(Optional.of(List.of(canonical)), CATALOG.valueOfInitializer(choice, java),
+            String java = CATALOG.initializerOfWires(form, List.of(sample.wire())).orElseThrow();
+            assertEquals(Optional.of(List.of(canonical)), CATALOG.wiresOfInitializer(form, java),
                     sample.type().id() + " wrote " + java + " and could not read it back");
         }
     }
 
     @Test
     void aListRoundTripsItemByItem() {
-        ValueChoice list = ValueChoice.listOf(BasicsValueTypes.DURATION);
-        String java = CATALOG.initializer(list, List.of("3s", "1m")).orElseThrow();
-        assertEquals(Optional.of(List.of("3s", "1m")), CATALOG.valueOfInitializer(list, java));
+        ValueForm list = list(BasicsValueTypes.DURATION);
+        String java = CATALOG.initializerOfWires(list, List.of("3s", "1m")).orElseThrow();
+        assertEquals(Optional.of(List.of("3s", "1m")), CATALOG.wiresOfInitializer(list, java));
 
         // An empty list is a value, and the empty *answer* means something else entirely.
-        assertEquals(Optional.of(List.of()),
-                CATALOG.valueOfInitializer(list, CATALOG.initializer(list, List.of()).orElseThrow()));
+        assertEquals(Optional.of(List.of()), CATALOG.wiresOfInitializer(
+                list, CATALOG.initializerOfWires(list, List.of()).orElseThrow()));
     }
 
     @Test
     void aListWhoseItemsContainCommasIsStillSplitCorrectly() {
-        ValueChoice colors = ValueChoice.listOf(BasicsValueTypes.COLOR);
+        ValueForm colors = list(BasicsValueTypes.COLOR);
         // new java.awt.Color(255, 0, 0) has two commas of its own, so a naive split would see six items.
-        String java = CATALOG.initializer(colors, List.of("#FF0000", "#00FF00")).orElseThrow();
-        assertEquals(Optional.of(List.of("#FF0000", "#00FF00")), CATALOG.valueOfInitializer(colors, java));
+        String java = CATALOG.initializerOfWires(colors, List.of("#FF0000", "#00FF00")).orElseThrow();
+        assertEquals(Optional.of(List.of("#FF0000", "#00FF00")), CATALOG.wiresOfInitializer(colors, java));
 
-        ValueChoice texts = ValueChoice.listOf(BasicsValueTypes.TEXT);
+        ValueForm texts = list(BasicsValueTypes.TEXT);
         assertEquals(Optional.of(List.of("a, b", "c")),
-                CATALOG.valueOfInitializer(texts,
-                        CATALOG.initializer(texts, List.of("a, b", "c")).orElseThrow()));
+                CATALOG.wiresOfInitializer(texts,
+                        CATALOG.initializerOfWires(texts, List.of("a, b", "c")).orElseThrow()));
     }
 
     /**
@@ -95,58 +103,58 @@ class LiteralInverseTest {
      */
     @Test
     void anInitializerThisPluginDoesNotWriteIsDeclined() {
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.DURATION), "java.time.Duration.ofSeconds(3)"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.DURATION), "REST_BETWEEN"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.COLOR), "java.awt.Color.RED"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.WHOLE_NUMBER), "MAX_ATTEMPTS + 1"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.TEXT), "name()"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.DURATION), "java.time.Duration.ofSeconds(3)"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.DURATION), "REST_BETWEEN"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.COLOR), "java.awt.Color.RED"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.WHOLE_NUMBER), "MAX_ATTEMPTS + 1"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.TEXT), "name()"));
     }
 
     @Test
     void anImpossibleDateOrTimeIsDeclinedRatherThanThrown() {
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.DATE), "java.time.LocalDate.of(2026, 13, 40)"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.TIME_OF_DAY), "java.time.LocalTime.of(25, 0, 0)"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.DATE), "java.time.LocalDate.of(2026, 13, 40)"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.TIME_OF_DAY), "java.time.LocalTime.of(25, 0, 0)"));
     }
 
     @Test
     void aListSourceThatIsNotAListCallIsDeclined() {
-        ValueChoice list = ValueChoice.listOf(BasicsValueTypes.WHOLE_NUMBER);
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(list, "42"));
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(list, "someHelper()"));
+        ValueForm list = list(BasicsValueTypes.WHOLE_NUMBER);
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(list, "42"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(list, "someHelper()"));
         // Unbalanced: declined rather than split wrongly.
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(list, "java.util.List.of(1, 2"));
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(list, "java.util.List.of(1, 2"));
     }
 
     @Test
     void oneUnreadableItemMakesTheWholeListUnreadable() {
         // Half a list is not a value: the host shows the source rather than a partial reading of it.
-        assertEquals(Optional.empty(), CATALOG.valueOfInitializer(
-                ValueChoice.listOf(BasicsValueTypes.DURATION),
+        assertEquals(Optional.empty(), CATALOG.wiresOfInitializer(
+                list(BasicsValueTypes.DURATION),
                 "java.util.List.of(java.time.Duration.ofMillis(3000L), REST)"));
     }
 
     @Test
     void whitespaceAsAFormatterWouldLeaveItIsTolerated() {
-        assertEquals(Optional.of(List.of("3s")), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.DURATION), "  java.time.Duration.ofMillis(3000L)  "));
-        assertEquals(Optional.of(List.of("#FF0000")), CATALOG.valueOfInitializer(
-                ValueChoice.of(BasicsValueTypes.COLOR), "new java.awt.Color( 255 , 0 , 0 )"));
-        assertEquals(Optional.of(List.of("3s", "1m")), CATALOG.valueOfInitializer(
-                ValueChoice.listOf(BasicsValueTypes.DURATION),
+        assertEquals(Optional.of(List.of("3s")), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.DURATION), "  java.time.Duration.ofMillis(3000L)  "));
+        assertEquals(Optional.of(List.of("#FF0000")), CATALOG.wiresOfInitializer(
+                one(BasicsValueTypes.COLOR), "new java.awt.Color( 255 , 0 , 0 )"));
+        assertEquals(Optional.of(List.of("3s", "1m")), CATALOG.wiresOfInitializer(
+                list(BasicsValueTypes.DURATION),
                 "java.util.List.of(\n    java.time.Duration.ofMillis(3000L),\n"
                         + "    java.time.Duration.ofMillis(60000L))"));
     }
 
     @Test
     void aTypeNobodyRegisteredIsDeclinedRatherThanGuessed() {
-        assertTrue(CATALOG.valueOfInitializer(
-                ValueChoice.of(ValueType.unknown("CHANNEL")), "\"general\"").isEmpty());
+        assertTrue(CATALOG.wiresOfInitializer(
+                one(ValueType.unknown("CHANNEL")), "\"general\"").isEmpty());
     }
 }

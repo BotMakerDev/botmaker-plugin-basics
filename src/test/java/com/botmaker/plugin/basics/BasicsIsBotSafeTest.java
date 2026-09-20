@@ -45,12 +45,14 @@ class BasicsIsBotSafeTest {
      * registrations, the labels and the Java literals — everything only a host or a generator asks for.
      * {@code ParameterStore} joined them on 2026-09-10: it takes {@code ParameterRow}s and gives them back,
      * which is the editor's half of the parameter mechanism, and a bot reads the very same file through
-     * {@code ProjectValues.forPlugin} as untyped text. All three are in the same jar as the bot-safe half,
-     * exactly as {@code SdkPlugin} sits in the SDK's jar: what matters is that nothing a bot links reaches
-     * them.
+     * {@code ProjectValues.forPlugin} as untyped text. {@code StoredForms} joined them on 2026-09-20 for the
+     * same reason and with the same reader on the other side: it decodes the type a stored row declares,
+     * which is a {@code ValueForm}, and a bot never decodes one. All four are in the same jar as the
+     * bot-safe half, exactly as {@code SdkPlugin} sits in the SDK's jar: what matters is that nothing a bot
+     * links reaches them.
      */
-    private static final Set<String> EDITOR_ONLY =
-            Set.of("BasicsPlugin.java", "BasicsValueTypes.java", "ParameterStore.java");
+    private static final Set<String> EDITOR_ONLY = Set.of(
+            "BasicsPlugin.java", "BasicsValueTypes.java", "ParameterStore.java", "StoredForms.java");
 
     /** What a bot's classpath does not have. Javadoc mentions are fine; a source reference is not. */
     private static final List<String> BANNED = List.of("com.botmaker.plugin.api", "javafx.");

@@ -4,7 +4,8 @@ import com.botmaker.plugin.api.ParameterEdit;
 import com.botmaker.plugin.api.ParameterRow;
 import com.botmaker.plugin.api.value.Range;
 import com.botmaker.plugin.api.value.ValueCatalog;
-import com.botmaker.plugin.api.value.ValueChoice;
+import com.botmaker.plugin.api.value.ValueForm;
+import com.botmaker.plugin.api.value.ValueType;
 import com.botmaker.plugin.api.value.Visibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -137,8 +138,8 @@ public final class ParameterStore {
         if (edit == null || !groupId.equals(edit.groupId())) return Optional.empty();
         return edit(edit.name(), held -> {
             ParameterRow row = held.row();
-            return entry(row, normalize(wiresOf(row.type(), edit.value()),
-                    row.type(), row.options(), row.bounds()));
+            return entry(row, normalize(wiresOf(row.form(), edit.value()),
+                    row.form(), row.options(), row.bounds()));
         });
     }
 
@@ -158,19 +159,19 @@ public final class ParameterStore {
     // ---- the declaration verbs, which are the owning plugin's own window's and nobody else's -------------
 
     /**
-     * Declares a new parameter of {@code type}, seeded with that type's default value.
+     * Declares a new parameter of {@code form}, seeded with that form's default value.
      *
      * <p>Empty when the name is blank or already taken <em>in this group</em>. It is also a generated field
      * name, so a name that is not a Java identifier is refused rather than stored and discovered at the next
      * build.
      */
-    public Optional<ParameterRow> declare(String name, ValueChoice type) {
+    public Optional<ParameterRow> declare(String name, ValueForm form) {
         String wanted = name == null ? "" : name.trim();
-        if (!isIdentifier(wanted) || type == null) return Optional.empty();
+        if (!isIdentifier(wanted) || form == null) return Optional.empty();
         List<Entry> entries = read();
         if (indexOf(entries, wanted) >= 0) return Optional.empty();
 
-        Entry declared = entry(ParameterRow.named(wanted, type).build(), defaultValue(type));
+        Entry declared = entry(ParameterRow.named(wanted, form).build(), defaultValue(form));
         entries.add(declared);
         write(entries);
         return Optional.of(declared.row());
@@ -204,30 +205,31 @@ public final class ParameterStore {
         ParameterRow held = was.row();
         if (!held.name().equals(wanted) && indexOf(entries, wanted) >= 0) return Optional.empty();
 
-        Entry renamed = entry(copy(held, wanted, held.type(), held.options(), held.bounds()), was.wires());
+        Entry renamed = entry(copy(held, wanted, held.form(), held.options(), held.bounds()), was.wires());
         entries.set(at, renamed);
         write(entries);
         return Optional.of(renamed.row());
     }
 
     /**
-     * Retypes a parameter: its value resets to the new type's default, its bounds are dropped, and its
-     * declared options survive only a change of <em>shape</em>.
+     * Retypes a parameter: its value resets to the new form's default, its bounds are dropped, and its
+     * declared options survive only a change of <em>container</em>.
      *
      * <p>The value does not carry across, deliberately — a date is not a number, and pretending otherwise
      * stores something the editor would have to explain away on the next open. Options survive one of and
-     * many of over the same base type, because that is a question about how many may be picked rather than
-     * about what may be picked; they do not survive a change of base type, whose values they no longer are.
+     * many of over the same leaf type, because that is a question about how many may be picked rather than
+     * about what may be picked; they do not survive a change of leaf, whose values they no longer are.
      */
-    public Optional<ParameterRow> retype(String name, ValueChoice type) {
-        if (type == null) return Optional.empty();
+    public Optional<ParameterRow> retype(String name, ValueForm form) {
+        if (form == null) return Optional.empty();
         return edit(name, held -> {
             ParameterRow row = held.row();
             // Compared by id, never by identity: a ValueType's identity is its persisted id, and two plugin
             // classloaders each holding their own copy of a class would make == mean nothing.
+            ValueType leaf = form.leaf();
             List<String> options =
-                    type.hasOptions() && type.type().equals(row.type().type()) ? row.options() : List.of();
-            return entry(copy(row, row.name(), type, options, Range.NONE), defaultValue(type));
+                    leaf != null && leaf.equals(row.form().leaf()) ? row.options() : List.of();
+            return entry(copy(row, row.name(), form, options, Range.NONE), defaultValue(form));
         });
     }
 
@@ -235,9 +237,9 @@ public final class ParameterStore {
     public Optional<ParameterRow> setOptions(String name, List<String> options) {
         return edit(name, held -> {
             ParameterRow row = held.row();
-            List<String> declared = normalizeOptions(options, row.type(), row.bounds());
+            List<String> declared = normalizeOptions(options, row.form(), row.bounds());
             return entry(row.toBuilder().options(declared).build(),
-                    normalize(held.wires(), row.type(), declared, row.bounds()));
+                    normalize(held.wires(), row.form(), declared, row.bounds()));
         });
     }
 
@@ -247,7 +249,7 @@ public final class ParameterStore {
             ParameterRow row = held.row();
             Range declared = bounds == null ? Range.NONE : bounds;
             return entry(row.toBuilder().bounds(declared).build(),
-                    normalize(held.wires(), row.type(), row.options(), declared));
+                    normalize(held.wires(), row.form(), row.options(), declared));
         });
     }
 
@@ -271,28 +273,33 @@ public final class ParameterStore {
     // ---- the coercion rules -----------------------------------------------------------------------------
 
     /**
-     * A fresh value of {@code type}: the type's own default for a single value, nothing for a list.
+     * A fresh value of {@code form}: the leaf's own default for a single value, nothing for a list.
      *
      * <p>An empty list rather than one empty item, because a list a user has not filled in has no items —
-     * seeding one would put a blank row in every new list-shaped parameter.
+     * seeding one would put a blank row in every new list parameter.
      */
-    public List<String> defaultValue(ValueChoice type) {
-        if (type == null || type.isList()) return List.of();
-        return List.of(catalog.defaultItem(type.type().id()));
+    public List<String> defaultValue(ValueForm form) {
+        if (form == null || !(form instanceof ValueForm.Leaf leaf)) return List.of();
+        return List.of(catalog.defaultItem(leaf.type().id()));
     }
 
     /**
-     * The declared choices as the type actually stores them: each canonicalised, duplicates dropped, order
-     * kept. Empty when the shape declares no set.
+     * The declared choices as the leaf actually stores them: each canonicalised, duplicates dropped, order
+     * kept. Empty when there is no one leaf to be values of.
      *
-     * <p>Every choice is itself a value of the base type, so it goes through the same normaliser a value
+     * <p>Every choice is itself a value of the leaf type, so it goes through the same normaliser a value
      * does — otherwise the radio button is labelled with one spelling and the stored value matches neither.
+     *
+     * <p><b>Whether a set is declared is not asked of the form.</b> It was asked of a shape until
+     * 2026-09-20, and a set belongs to the declaration: a row with options has them, a row without does not,
+     * and no type ever knew which.
      */
-    public List<String> normalizeOptions(List<String> options, ValueChoice type, Range bounds) {
-        if (type == null || !type.hasOptions() || options == null) return List.of();
+    public List<String> normalizeOptions(List<String> options, ValueForm form, Range bounds) {
+        ValueType leaf = form == null ? null : form.leaf();
+        if (leaf == null || options == null) return List.of();
         return options.stream()
                 .filter(Objects::nonNull)
-                .map(option -> item(option, type, bounds == null ? Range.NONE : bounds))
+                .map(option -> item(option, leaf, bounds == null ? Range.NONE : bounds))
                 .distinct()
                 .toList();
     }
@@ -301,28 +308,29 @@ public final class ParameterStore {
      * A stored value, canonicalised, clamped and constrained to what is still on offer.
      *
      * @param value   the stored wire form, one entry per item
-     * @param type    what kind of value, and in what shape
-     * @param options the declared choices, for an option-bearing shape
+     * @param form    what kind of value
+     * @param options the declared choices, when the row declares a set
      * @param bounds  the declared range, for a bounded number
      */
-    public List<String> normalize(List<String> value, ValueChoice type, List<String> options, Range bounds) {
-        if (type == null) return value == null ? List.of() : List.copyOf(value);
+    public List<String> normalize(List<String> value, ValueForm form, List<String> options, Range bounds) {
+        ValueType leaf = form == null ? null : form.leaf();
+        if (leaf == null) return value == null ? List.of() : List.copyOf(value);
         List<String> safe = value == null ? List.of() : value.stream().filter(Objects::nonNull).toList();
-        List<String> choices = normalizeOptions(options, type, bounds);
+        List<String> choices = normalizeOptions(options, form, bounds);
         Range range = bounds == null ? Range.NONE : bounds;
 
-        if (!type.isList()) {
-            return List.of(constrain(item(safe.isEmpty() ? null : safe.getFirst(), type, range), choices));
+        if (form instanceof ValueForm.Leaf) {
+            return List.of(constrain(item(safe.isEmpty() ? null : safe.getFirst(), leaf, range), choices));
         }
         // An option-bearing list follows the declaration order, not the file's: two projects that picked the
         // same choices in a different order must write the same line, or a diff shows a change nobody made.
         if (!choices.isEmpty()) {
             LinkedHashSet<String> chosen = safe.stream()
-                    .map(each -> item(each, type, range))
+                    .map(each -> item(each, leaf, range))
                     .collect(Collectors.toCollection(LinkedHashSet::new));
             return choices.stream().filter(chosen::contains).toList();
         }
-        return safe.stream().map(each -> item(each, type, range)).toList();
+        return safe.stream().map(each -> item(each, leaf, range)).toList();
     }
 
     /** {@code value} if it is still on offer, else the first thing that is. Unconstrained when nothing is. */
@@ -338,10 +346,10 @@ public final class ParameterStore {
      * disagree about the spelling of the result — a clamp that produced {@code "5"} for a decimal would
      * otherwise store text its own reader normalises to {@code "5.0"} on the very next read.
      */
-    private String item(String wire, ValueChoice type, Range bounds) {
-        String id = type.type().id();
+    private String item(String wire, ValueType leaf, Range bounds) {
+        String id = leaf.id();
         String canonical = catalog.normalize(id, wire);
-        if (!type.type().bounded() || bounds.isEmpty()) return canonical;
+        if (!leaf.bounded() || bounds.isEmpty()) return canonical;
         return catalog.normalize(id, clamp(canonical, bounds));
     }
 
@@ -391,17 +399,17 @@ public final class ParameterStore {
     /** One entry of this store's group, with the row's initialiser written from {@code wires}. */
     private Entry entry(ParameterRow row, List<String> wires) {
         List<String> stored = wires == null ? List.of() : List.copyOf(wires);
-        return new Entry(groupId, row.toBuilder().value(sourceOf(row.type(), stored)).build(), stored);
+        return new Entry(groupId, row.toBuilder().value(sourceOf(row.form(), stored)).build(), stored);
     }
 
-    /** The stored value as the Java a field of this type takes — {@code ""} for a type nothing registers. */
-    private String sourceOf(ValueChoice type, List<String> wires) {
-        return catalog.initializer(type, wires).orElse("");
+    /** The stored value as the Java a field of this form takes — {@code ""} for a type nothing registers. */
+    private String sourceOf(ValueForm form, List<String> wires) {
+        return catalog.initializerOfWires(form, wires).orElse("");
     }
 
     /** That read backwards: the stored form an initialiser came from, or nothing the codec could read. */
-    private List<String> wiresOf(ValueChoice type, String source) {
-        return catalog.valueOfInitializer(type, source).orElse(List.of());
+    private List<String> wiresOf(ValueForm form, String source) {
+        return catalog.wiresOfInitializer(form, source).orElse(List.of());
     }
 
     private boolean isMine(Entry entry) {
@@ -471,17 +479,17 @@ public final class ParameterStore {
      * One stored object as a row.
      *
      * <p>Every read is total, because a hand-edited file must open: an unknown type id becomes
-     * {@code ValueType.unknown} through the catalog, an unknown shape reads as one free value, and an
-     * unknown visibility reads as the contract's own fallback.
+     * {@code ValueType.unknown} through the catalog, an unknown shape reads as one free value through
+     * {@link StoredForms}, and an unknown visibility reads as the contract's own fallback.
      */
     private ParameterRow rowOf(JsonNode node, List<String> wires) {
         JsonNode type = node.path("type");
-        ValueChoice choice = ValueChoice.fromWire(catalog,
+        ValueForm form = StoredForms.formOf(catalog,
                 type.isObject() ? type.path("type").asText("") : type.asText(""),
                 type.isObject() ? text(type.path("shape")) : null,
                 type.isObject() && type.hasNonNull("list") ? type.path("list").asBoolean() : null);
-        ParameterRow.Builder row = ParameterRow.named(node.path("name").asText(""), choice)
-                .value(sourceOf(choice, wires))
+        ParameterRow.Builder row = ParameterRow.named(node.path("name").asText(""), form)
+                .value(sourceOf(form, wires))
                 .description(node.path("description").asText(""))
                 .category(node.path("category").asText(""))
                 .options(strings(node.path("options")))
@@ -502,9 +510,9 @@ public final class ParameterStore {
      * final: a row is a plugin-constructed value, so the two components that identify it are settled when it
      * is named rather than editable afterwards.
      */
-    private static ParameterRow copy(ParameterRow row, String name, ValueChoice type,
+    private static ParameterRow copy(ParameterRow row, String name, ValueForm form,
                                      List<String> options, Range bounds) {
-        return ParameterRow.named(name, type)
+        return ParameterRow.named(name, form)
                 .description(row.description())
                 .category(row.category())
                 .visibility(row.visibility())
@@ -516,9 +524,10 @@ public final class ParameterStore {
     /**
      * One row as a stored object.
      *
-     * <p>Both spellings of the type are written — the shape and the older {@code list} boolean — so a reader
-     * that predates the shape axis still sees a list as a list. It costs one field and it is what
-     * {@link ValueChoice#fromWire} is total against.
+     * <p>All three spellings of the type are written — the id, the shape and the older {@code list} boolean
+     * — so a reader that predates the shape axis still sees a list as a list, and one that predates
+     * {@code ValueForm} still reads a whole row. It costs two fields and it is what {@link StoredForms} is
+     * total against.
      */
     private static ObjectNode nodeOf(Entry entry) {
         ParameterRow row = entry.row;
@@ -526,9 +535,10 @@ public final class ParameterStore {
         node.put("name", row.name());
         node.put(GROUP, entry.group);
         ObjectNode type = node.putObject("type");
-        type.put("type", row.type().type().id());
-        type.put("shape", row.type().shape().name());
-        type.put("list", row.type().isList());
+        ValueType leaf = row.form().leaf();
+        type.put("type", leaf == null ? row.form().sourceName() : leaf.id());
+        type.put("shape", StoredForms.shapeOf(row.form(), !row.options().isEmpty()));
+        type.put("list", StoredForms.isList(row.form()));
         put(node.putArray("value"), entry.wires);
         node.put("description", row.description());
         node.put("category", row.category());

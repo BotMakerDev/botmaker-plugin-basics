@@ -1,7 +1,7 @@
 package com.botmaker.plugin.basics.values;
 
 import com.botmaker.plugin.api.value.ValueCatalog;
-import com.botmaker.plugin.api.value.ValueChoice;
+import com.botmaker.plugin.api.value.ValueForm;
 import com.botmaker.plugin.api.value.ValueType;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +81,7 @@ class BasicsValueTypesTest {
     @Test
     void noTypeHereAsksForAnImport() {
         for (ValueType type : CATALOG.types()) {
-            assertTrue(CATALOG.imports(ValueChoice.of(type)).isEmpty(), type.id());
+            assertTrue(CATALOG.imports(ValueForm.of(type)).isEmpty(), type.id());
         }
     }
 

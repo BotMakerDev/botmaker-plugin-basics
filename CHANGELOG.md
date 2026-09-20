@@ -19,6 +19,24 @@ No source changes since v0.0.2; re-released for updated upstream pins.
 
 ### Changed
 
+- **`ParameterStore`'s verbs take a `ValueForm`.** `declare`, `retype`, `normalize`, `normalizeOptions` and
+  `defaultValue` took a `ValueChoice`, which the contract deleted on 2026-09-20. Two rules read differently
+  as a result and both read better: declared options now survive a change of *container* over one leaf type
+  rather than a change of shape, which is the same rule said in terms of what the options are values of; and
+  whether a set is declared is no longer asked of the type at all — a row with options has them, a row
+  without does not, and no type ever knew which. **The file format is unchanged**, including the `shape` and
+  `list` fields, which are still written so that a Studio built before this release opens a project saved by
+  one built after it.
+
+- **`StoredForms`** — the one place that knows how a type is spelled in a JSON file written before
+  `ValueForm`: `{"type":"DURATION","shape":"ANY_OF","list":true}` read back to a form, and written out
+  again. Total, with the totality the deleted `ValueShape.fromWire` carried — an id nothing registers is an
+  unknown type and a shape a newer writer invented is one free value. It is here rather than in each reader
+  because both readers of that spelling are files, this plugin's `parameters.json` and the SDK plugin's
+  `activities.json`, and the SDK depends on this module: one decoder, on the side that owns the vocabulary
+  the files are written in. Editor-side, and exempted in `BasicsIsBotSafeTest` for the same reason
+  `ParameterStore` is. It goes when the files do.
+
 - **`ParameterStore` keeps the stored form beside each row.** A `ParameterRow`'s value is the Java
   initialiser it is written from now, and `parameters.json` still holds the stored items the coercion rules
   — canonicalise, clamp, prune — are written over. The two are joined at this store's boundary and nowhere
