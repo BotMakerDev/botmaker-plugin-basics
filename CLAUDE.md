@@ -18,12 +18,22 @@ It owns three things, all three landed on 2026-09-09.
    running bot calls it (`com.botmaker.sdk.authoring.WireText` delegates to it, so there is one grammar
    rather than two); `BasicsValueTypes` is the registration, the labels and the Java literals, and names the
    contract and the toolkit, both of which a bot does not have.
-2. **`Settings` and `ValueGrammar`**, in `com.botmaker.plugin.basics.store` — how a *running bot* reads its
-   own parameters, plus `BasicsGrammar`, this module's own nine readers. They came from
-   `com.botmaker.plugin.toolkit.config`, where they landed earlier the same day and never shipped, and from
-   `botmaker-shared` for the two days before that. Each move was right about the one before it; what
-   settled it is that **a widget kit owns no value types**, so it could hold the mechanism only under a
-   promise never to use it, while this module owns nine and ships a grammar for them like any plugin.
+2. **`Settings.forPlugin`**, in `com.botmaker.plugin.basics.store` — how a *running bot* reads a plugin's
+   own file, one plugin id plus one document name to one path.
+
+   **The reading half and the whole grammar layer went on 2026-09-21.** `Settings.load`/`loadAll`/`enabled`/
+   `declares`/`use`, `ValueGrammar`, this module's `BasicsGrammar` and the `ServiceLoader` that found them
+   are deleted. They existed to answer *what does this stored text mean* for a value a bot read out of
+   JSON, and a bot reads no such value any more: a user parameter is a `@Param` field in the bot's own Java
+   (2026-09-17) and a plugin's values are Java the plugin ships (2026-09-21). `Settings.enabled` in
+   particular had to go rather than be deprecated — it read `activities.json`, so with that file gone it
+   could only ever have answered `false`, which is a method that compiles, runs, and switches every
+   activity off. **Deleting beats deprecating whenever a kept method has no data source left**: the method
+   still answers, and what it answers is a fallback.
+
+   `JdkText` stays and is still the grammar for this module's nine types — it is what parses the text a
+   user types into a cell, which is a live question. What is gone is the registry that let a *bot* look one
+   up by name.
 3. **The project store** — `PluginData` and `ProjectStore`. A plugin's data is a **folder of its own files**,
    `plugins/<id prefix>/<last segment>/<name>.json` inside the project's resources, so `com.botmaker.sdk`
    writes under `plugins/com.botmaker/sdk/`: a folder per author and a folder per plugin, derived from the
@@ -48,9 +58,13 @@ It owns three things, all three landed on 2026-09-09.
    owning type's codec, clamp to a declared `Range`, prune a value to the options still on offer, seed a
    fresh one with the type's default. A plugin declares a `ParameterGroup`, holds one of these over its own
    `PluginData`, and hands the host back what `rows(groupId)` answers. It names the contract, so it is
-   editor-only and exempted in `BasicsIsBotSafeTest`; the same file is read by a bot through
-   `ProjectValues.forPlugin(id)`, as untyped text. Giving the SDK plugin's activities and flow their own
-   files is a later phase.
+   editor-only and exempted in `BasicsIsBotSafeTest`. **A bot no longer reads that file at all** —
+   `ProjectValues` is deleted (2026-09-21) — so `parameters.json` is editor state, and a plugin that wants
+   a value in the bot's hands ships Java for it instead.
+
+   It is still built on `ValueCatalog.initializerOfWires`, `wiresOfInitializer`, `defaultItem`, `normalize`
+   and `StoredForms`, at nine call sites. Those were listed for deletion as legacy and are not: porting
+   this store onto the form/value pair is a phase of its own.
 
    **The verbs are the owning plugin's own, and only a value crosses from outside** (2026-09-17).
    `declared(ParameterDeclaration)` is deleted with the contract method it implemented: a *user* parameter
@@ -59,17 +73,33 @@ It owns three things, all three landed on 2026-09-09.
    `setOptions`, `setBounds`, `setCategory`, `setVisibility`, `setDescription`, `remove`) are called by the
    plugin that owns the group, from its own code. They stay public and are never deleted.
 
-5. **`@Param` and `PluginStore`**, added 2026-09-17, and together they are the split that matters now.
+5. **`@Managed`**, in `com.botmaker.plugin.basics.managed`, added 2026-09-21. One member, the plugin-local
+   id; `@Target({TYPE, METHOD})`. On a `public static` method it says *the host owns the expression this
+   returns* — one fixed value the plugin shipped, rewritten in place and never added to or deleted. On a
+   type it says *the host owns the members* — an open set the user grows, which is what 🖼 Manage Pictures
+   does to `Pictures`.
+
+   **It is here and not in the contract for the same reason `@Param` is**: a bot has no contract jar
+   (`provided`), and a bot's own source is where these land. It replaced `ManagedField` and
+   `StudioPlugin.managedFields()`, which matched on a *declared type* and guessed that a class of nothing
+   but managed constants was managed whole — two inferences from shape, where this is a statement.
+
+6. **`@Param` and `PluginStore`**, added 2026-09-17, and together they are the split that matters now.
    `com.botmaker.plugin.basics.params.Param` is how a **user parameter** is declared: a `public static`
    field in the *bot's own Java*, which Studio reads off the syntax tree and whose initializer the value
    cell rewrites. `PluginStore` (and `Settings.forPlugin` on the bot side) is how a **plugin's own state**
    is stored: a record in, a record out, over `PluginData`'s tree.
 
-   **The rule to hold on to: a user parameter is Java; a plugin's state is JSON.** `Settings.load(name,
-   Class)` and `ParameterStore` still exist, still work and are never deleted, and what they carry is a
-   plugin's rows — an activity's enable flag, a plugin's own settings. They stopped being how a bot reads
-   *its* parameters because a name is a string on both sides: a typo compiled and answered the type's
-   fallback, and the declaration lived where the bot's author could not see it.
+   **The rule to hold on to, as it now stands: a user parameter is Java, a plugin's values are Java, and
+   what is left in JSON is what a bot does not read.** It was *"a user parameter is Java; a plugin's state
+   is JSON"* until 2026-09-21, and the second half moved: an activity's enable flag is part of
+   `com.botmaker.sdk.api.flow.Flow`, in the bot's own source, because it is part of what the bot does.
+   Capture targets and the flow editor's card positions stay JSON, because a bot reads neither.
+
+   The reason is the same one both times: a name is a string on both sides, so a typo compiled and answered
+   the type's fallback, and the declaration lived where the bot's author could not see it. `@Managed` is
+   that argument applied to the plugin's own values — see `Managed`'s javadoc and
+   `docs/refactor/33-plugin-java.md`.
 
    `Param` is bot-safe like the rest, which is why its members are strings (`visibility`, `min`, `max`,
    `options`): the contract's `Visibility` and the value types are off a bot's classpath, and the value's
