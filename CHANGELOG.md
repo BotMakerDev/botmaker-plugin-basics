@@ -19,6 +19,14 @@ No source changes since v0.0.2; re-released for updated upstream pins.
 
 ### Changed
 
+- **`ParameterStore` keeps the stored form beside each row.** A `ParameterRow`'s value is the Java
+  initialiser it is written from now, and `parameters.json` still holds the stored items the coercion rules
+  — canonicalise, clamp, prune — are written over. The two are joined at this store's boundary and nowhere
+  else. The wires are kept on the entry rather than derived back out of the row, because every read decodes
+  **every** group's rows to write the siblings back untouched, and a row of a type this plugin's catalog
+  cannot read has no initialiser at all: deriving it would empty another window's value the first time this
+  one saved. The file format is unchanged.
+
 - **The nine codecs are built with `Codecs.of` and read text through `Source`.** Each answers a *value*
   rather than a stored string, following the contract's `ValueCodec.valueOfLiteral`, which replaces
   `wireOfLiteral`; the string and character inverses are the toolkit's `Source.stringValue`/

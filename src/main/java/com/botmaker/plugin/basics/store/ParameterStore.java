@@ -135,8 +135,11 @@ public final class ParameterStore {
      */
     public Optional<ParameterRow> apply(ParameterEdit edit) {
         if (edit == null || !groupId.equals(edit.groupId())) return Optional.empty();
-        return edit(edit.name(), row -> row.withValue(
-                normalize(edit.value(), row.type(), row.options(), row.bounds())));
+        return edit(edit.name(), held -> {
+            ParameterRow row = held.row();
+            return entry(row, normalize(wiresOf(row.type(), edit.value()),
+                    row.type(), row.options(), row.bounds()));
+        });
     }
 
     // declared(ParameterDeclaration) stood here until 2026-09-17, reconciling a row the *host* wanted against
@@ -167,10 +170,10 @@ public final class ParameterStore {
         List<Entry> entries = read();
         if (indexOf(entries, wanted) >= 0) return Optional.empty();
 
-        ParameterRow declared = ParameterRow.named(wanted, type).value(defaultValue(type)).build();
-        entries.add(new Entry(groupId, declared));
+        Entry declared = entry(ParameterRow.named(wanted, type).build(), defaultValue(type));
+        entries.add(declared);
         write(entries);
-        return Optional.of(declared);
+        return Optional.of(declared.row());
     }
 
     /** Removes the parameter {@code name} names. False when this group holds no such row. */
@@ -197,13 +200,14 @@ public final class ParameterStore {
         List<Entry> entries = read();
         int at = indexOf(entries, from);
         if (at < 0) return Optional.empty();
-        ParameterRow held = entries.get(at).row;
+        Entry was = entries.get(at);
+        ParameterRow held = was.row();
         if (!held.name().equals(wanted) && indexOf(entries, wanted) >= 0) return Optional.empty();
 
-        ParameterRow renamed = copy(held, wanted, held.type(), held.value(), held.options(), held.bounds());
-        entries.set(at, new Entry(groupId, renamed));
+        Entry renamed = entry(copy(held, wanted, held.type(), held.options(), held.bounds()), was.wires());
+        entries.set(at, renamed);
         write(entries);
-        return Optional.of(renamed);
+        return Optional.of(renamed.row());
     }
 
     /**
@@ -217,50 +221,51 @@ public final class ParameterStore {
      */
     public Optional<ParameterRow> retype(String name, ValueChoice type) {
         if (type == null) return Optional.empty();
-        return edit(name, row -> {
+        return edit(name, held -> {
+            ParameterRow row = held.row();
             // Compared by id, never by identity: a ValueType's identity is its persisted id, and two plugin
             // classloaders each holding their own copy of a class would make == mean nothing.
             List<String> options =
                     type.hasOptions() && type.type().equals(row.type().type()) ? row.options() : List.of();
-            return copy(row, row.name(), type, defaultValue(type), options, Range.NONE);
+            return entry(copy(row, row.name(), type, options, Range.NONE), defaultValue(type));
         });
     }
 
     /** Replaces the declared choices, pruning the stored value to what is still on offer. */
     public Optional<ParameterRow> setOptions(String name, List<String> options) {
-        return edit(name, row -> {
+        return edit(name, held -> {
+            ParameterRow row = held.row();
             List<String> declared = normalizeOptions(options, row.type(), row.bounds());
-            return row.toBuilder()
-                    .options(declared)
-                    .value(normalize(row.value(), row.type(), declared, row.bounds()))
-                    .build();
+            return entry(row.toBuilder().options(declared).build(),
+                    normalize(held.wires(), row.type(), declared, row.bounds()));
         });
     }
 
     /** Declares a range, clamping the stored value into it. */
     public Optional<ParameterRow> setBounds(String name, Range bounds) {
-        return edit(name, row -> {
+        return edit(name, held -> {
+            ParameterRow row = held.row();
             Range declared = bounds == null ? Range.NONE : bounds;
-            return row.toBuilder()
-                    .bounds(declared)
-                    .value(normalize(row.value(), row.type(), row.options(), declared))
-                    .build();
+            return entry(row.toBuilder().bounds(declared).build(),
+                    normalize(held.wires(), row.type(), row.options(), declared));
         });
     }
 
     /** Files the parameter under a category of the owning group's — the rail inside the section. */
     public Optional<ParameterRow> setCategory(String name, String category) {
-        return edit(name, row -> row.toBuilder().category(category == null ? "" : category).build());
+        return edit(name, held ->
+                held.with(held.row().toBuilder().category(category == null ? "" : category).build()));
     }
 
     /** Says whether whoever runs the bot is offered this parameter at all. */
     public Optional<ParameterRow> setVisibility(String name, Visibility visibility) {
-        return edit(name, row -> row.toBuilder().visibility(visibility).build());
+        return edit(name, held -> held.with(held.row().toBuilder().visibility(visibility).build()));
     }
 
     /** The sentence a user reads instead of the field name. */
     public Optional<ParameterRow> setDescription(String name, String description) {
-        return edit(name, row -> row.toBuilder().description(description == null ? "" : description).build());
+        return edit(name, held ->
+                held.with(held.row().toBuilder().description(description == null ? "" : description).build()));
     }
 
     // ---- the coercion rules -----------------------------------------------------------------------------
@@ -361,12 +366,42 @@ public final class ParameterStore {
 
     // ---- the file ---------------------------------------------------------------------------------------
 
-    /** One stored row and the group it belongs to — this store's, or another group of the same plugin's. */
-    private record Entry(String group, ParameterRow row) {
+    /**
+     * One stored row and the group it belongs to — this store's, or another group of the same plugin's.
+     *
+     * <p><b>The wires are kept beside the row, and that is not redundancy.</b> Since 2026-09-20 a
+     * {@link ParameterRow}'s value crosses as the Java initialiser it is written from, and this file holds
+     * the stored form — the pair the coercion rules below are written over. A row of a type <em>this</em>
+     * plugin's catalog cannot read has no initialiser at all, and every read here decodes every group's rows
+     * to write the siblings back untouched. Deriving the stored form back out of a row would therefore empty
+     * another window's value the first time this one saved.
+     */
+    private record Entry(String group, ParameterRow row, List<String> wires) {
 
         boolean mine(String groupId) {
             return groupId.equals(group);
         }
+
+        /** The same row and group holding {@code changed}, which is every verb but a value edit. */
+        Entry with(ParameterRow changed) {
+            return new Entry(group, changed, wires);
+        }
+    }
+
+    /** One entry of this store's group, with the row's initialiser written from {@code wires}. */
+    private Entry entry(ParameterRow row, List<String> wires) {
+        List<String> stored = wires == null ? List.of() : List.copyOf(wires);
+        return new Entry(groupId, row.toBuilder().value(sourceOf(row.type(), stored)).build(), stored);
+    }
+
+    /** The stored value as the Java a field of this type takes — {@code ""} for a type nothing registers. */
+    private String sourceOf(ValueChoice type, List<String> wires) {
+        return catalog.initializer(type, wires).orElse("");
+    }
+
+    /** That read backwards: the stored form an initialiser came from, or nothing the codec could read. */
+    private List<String> wiresOf(ValueChoice type, String source) {
+        return catalog.valueOfInitializer(type, source).orElse(List.of());
     }
 
     private boolean isMine(Entry entry) {
@@ -380,16 +415,16 @@ public final class ParameterStore {
      * and the copy that eventually forgets to write is the one nobody notices: the screen shows the change
      * either way, and only the next open disagrees.
      */
-    private Optional<ParameterRow> edit(String name, java.util.function.UnaryOperator<ParameterRow> change) {
+    private Optional<ParameterRow> edit(String name, java.util.function.UnaryOperator<Entry> change) {
         List<Entry> entries = read();
         int at = indexOf(entries, name);
         if (at < 0) return Optional.empty();
 
-        ParameterRow changed = change.apply(entries.get(at).row);
-        if (changed == null) return Optional.empty();
-        entries.set(at, new Entry(groupId, changed));
+        Entry changed = change.apply(entries.get(at));
+        if (changed == null || changed.row() == null) return Optional.empty();
+        entries.set(at, changed);
         write(entries);
-        return Optional.of(changed);
+        return Optional.of(changed.row());
     }
 
     /** The index of the row {@code name} names within this group, or -1. */
@@ -412,7 +447,8 @@ public final class ParameterStore {
         List<Entry> entries = new ArrayList<>();
         for (JsonNode node : data.read(PluginData.PARAMETERS).root().path(ROWS)) {
             if (!node.isObject()) continue;
-            entries.add(new Entry(node.path(GROUP).asText(""), rowOf(node)));
+            List<String> wires = strings(node.path("value"));
+            entries.add(new Entry(node.path(GROUP).asText(""), rowOf(node, wires), wires));
         }
         return entries;
     }
@@ -438,14 +474,14 @@ public final class ParameterStore {
      * {@code ValueType.unknown} through the catalog, an unknown shape reads as one free value, and an
      * unknown visibility reads as the contract's own fallback.
      */
-    private ParameterRow rowOf(JsonNode node) {
+    private ParameterRow rowOf(JsonNode node, List<String> wires) {
         JsonNode type = node.path("type");
         ValueChoice choice = ValueChoice.fromWire(catalog,
                 type.isObject() ? type.path("type").asText("") : type.asText(""),
                 type.isObject() ? text(type.path("shape")) : null,
                 type.isObject() && type.hasNonNull("list") ? type.path("list").asBoolean() : null);
         ParameterRow.Builder row = ParameterRow.named(node.path("name").asText(""), choice)
-                .value(strings(node.path("value")))
+                .value(sourceOf(choice, wires))
                 .description(node.path("description").asText(""))
                 .category(node.path("category").asText(""))
                 .options(strings(node.path("options")))
@@ -459,16 +495,16 @@ public final class ParameterStore {
     }
 
     /**
-     * One row with a new name, type, value, options and bounds — everything else carried across.
+     * One row with a new name, type, options and bounds — everything else carried across. The value is the
+     * caller's, because it is the stored form that decides it and only {@link #entry} can write one.
      *
      * <p>A helper rather than {@link ParameterRow#toBuilder()} because the builder's name and type are
      * final: a row is a plugin-constructed value, so the two components that identify it are settled when it
      * is named rather than editable afterwards.
      */
-    private static ParameterRow copy(ParameterRow row, String name, ValueChoice type, List<String> value,
+    private static ParameterRow copy(ParameterRow row, String name, ValueChoice type,
                                      List<String> options, Range bounds) {
         return ParameterRow.named(name, type)
-                .value(value)
                 .description(row.description())
                 .category(row.category())
                 .visibility(row.visibility())
@@ -493,7 +529,7 @@ public final class ParameterStore {
         type.put("type", row.type().type().id());
         type.put("shape", row.type().shape().name());
         type.put("list", row.type().isList());
-        put(node.putArray("value"), row.value());
+        put(node.putArray("value"), entry.wires);
         node.put("description", row.description());
         node.put("category", row.category());
         node.put("visibility", row.visibility().id());

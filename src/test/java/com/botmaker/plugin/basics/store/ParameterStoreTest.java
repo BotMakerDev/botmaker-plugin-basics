@@ -75,7 +75,7 @@ class ParameterStoreTest {
 
         assertEquals("retries", row.name());
         assertEquals("WHOLE_NUMBER", row.type().type().id());
-        assertEquals(List.of("2"), row.value());
+        assertEquals("2", row.value());
         assertEquals("How many tries", row.description());
         assertEquals("Timing", row.category());
         assertEquals(Visibility.EDITOR_ONLY, row.visibility());
@@ -131,10 +131,10 @@ class ParameterStoreTest {
 
         Optional<ParameterRow> stored = over(dir).apply(ParameterEdit.of(OURS, "retries", "4"));
 
-        assertEquals("4", stored.orElseThrow().singleValue());
+        assertEquals("4", stored.orElseThrow().value());
         assertTrue(Files.readString(file(dir)).contains("\"4\""));
         // Read back through the surface, not only through the file: the window asks again after an edit.
-        assertEquals("4", over(dir).rows(OURS).getFirst().singleValue());
+        assertEquals("4", over(dir).rows(OURS).getFirst().value());
     }
 
     /** Everything the edit did not name is still there — an edit is not a rewrite of the row. */
@@ -164,18 +164,25 @@ class ParameterStoreTest {
         assertEquals(before, Files.readString(file(dir)));
     }
 
-    /** A list-shaped row crosses one entry per item, and an edit to it replaces the whole list. */
+    /**
+     * A list-shaped row crosses as the one initialiser that builds it, and an edit replaces the whole list.
+     *
+     * <p>The file underneath still holds one stored entry per item — that is what the coercion rules are
+     * written over — so this is also the assertion that the two spellings agree at the boundary.
+     */
     @Test
-    void aListShapedRowCrossesAndIsEditedItemByItem(@TempDir Path dir) {
+    void aListShapedRowCrossesAsOneInitializer(@TempDir Path dir) throws IOException {
         over(dir).declare("hotkeys", ValueChoice.listOf(TEXT));
-        over(dir).apply(new ParameterEdit(OURS, "hotkeys", List.of("F1", "F2")));
+        over(dir).apply(new ParameterEdit(OURS, "hotkeys", "java.util.List.of(\"F1\", \"F2\")"));
 
-        assertEquals(List.of("F1", "F2"), over(dir).rows(OURS).getFirst().value());
+        assertEquals("java.util.List.of(\"F1\", \"F2\")", over(dir).rows(OURS).getFirst().value());
+        assertTrue(Files.readString(file(dir)).contains("\"F1\""));
 
         ParameterRow stored = over(dir)
-                .apply(new ParameterEdit(OURS, "hotkeys", List.of("F1", "F2", "F3"))).orElseThrow();
+                .apply(new ParameterEdit(OURS, "hotkeys", "java.util.List.of(\"F1\", \"F2\", \"F3\")"))
+                .orElseThrow();
 
-        assertEquals(List.of("F1", "F2", "F3"), stored.value());
+        assertEquals("java.util.List.of(\"F1\", \"F2\", \"F3\")", stored.value());
         assertTrue(stored.type().isList());
     }
 
@@ -185,10 +192,11 @@ class ParameterStoreTest {
     void aDeclaredParameterIsSeededWithItsTypesDefault(@TempDir Path dir) {
         ParameterRow fresh = over(dir).declare("retries", ValueChoice.of(WHOLE)).orElseThrow();
 
-        assertEquals("0", fresh.singleValue(), "a seeded value has to be one the bot can compile");
+        assertEquals("0", fresh.value(), "a seeded value has to be one the bot can compile");
         assertEquals("retries", over(dir).rows(OURS).getFirst().name());
         // A list has no items until the user adds one; seeding one would put a blank row in every new list.
-        assertEquals(List.of(), over(dir).declare("keys", ValueChoice.listOf(TEXT)).orElseThrow().value());
+        assertEquals("java.util.List.of()",
+                over(dir).declare("keys", ValueChoice.listOf(TEXT)).orElseThrow().value());
     }
 
     /** Declaring is the one verb that has to work on a project whose file does not exist yet. */
@@ -251,7 +259,7 @@ class ParameterStoreTest {
 
         assertEquals("How many tries", renamed.description());
         assertEquals(new Range("1", "5"), renamed.bounds());
-        assertEquals(List.of("2"), renamed.value());
+        assertEquals("2", renamed.value());
     }
 
     /**
@@ -265,7 +273,7 @@ class ParameterStoreTest {
         ParameterRow retyped = over(dir).retype("retries", ValueChoice.of(TEXT)).orElseThrow();
 
         assertEquals(TEXT.id(), retyped.type().type().id());
-        assertEquals("", retyped.singleValue());
+        assertEquals("\"\"", retyped.value(), "the empty text, written as the Java that produces it");
         assertTrue(retyped.bounds().isEmpty());
     }
 
@@ -287,12 +295,12 @@ class ParameterStoreTest {
     void replacingTheOptionsPrunesTheValue(@TempDir Path dir) {
         over(dir).declare("mode", new ValueChoice(TEXT, ValueShape.ONE_OF));
         over(dir).setOptions("mode", List.of("fast", "safe"));
-        over(dir).apply(ParameterEdit.of(OURS, "mode", "safe"));
+        over(dir).apply(ParameterEdit.of(OURS, "mode", "\"safe\""));
 
         ParameterRow pruned = over(dir).setOptions("mode", List.of("fast", "careful")).orElseThrow();
 
         assertEquals(List.of("fast", "careful"), pruned.options());
-        assertEquals("fast", pruned.singleValue(), "the value it held is no longer on offer");
+        assertEquals("\"fast\"", pruned.value(), "the value it held is no longer on offer");
     }
 
     /** A range is advice and a clamp, never a validation that can fail. */
@@ -301,9 +309,9 @@ class ParameterStoreTest {
         over(dir).declare("retries", ValueChoice.of(WHOLE));
         over(dir).apply(ParameterEdit.of(OURS, "retries", "900"));
 
-        assertEquals("5", over(dir).setBounds("retries", new Range("1", "5")).orElseThrow().singleValue());
+        assertEquals("5", over(dir).setBounds("retries", new Range("1", "5")).orElseThrow().value());
         assertEquals("1", over(dir).apply(ParameterEdit.of(OURS, "retries", "-4")).orElseThrow()
-                .singleValue(), "an edit is clamped by the same rules");
+                .value(), "an edit is clamped by the same rules");
     }
 
     /** The editor's rules run on the way in, so a value is canonicalised rather than stored as typed. */
@@ -312,7 +320,7 @@ class ParameterStoreTest {
         over(dir).declare("retries", ValueChoice.of(WHOLE));
 
         assertEquals("7", over(dir).apply(ParameterEdit.of(OURS, "retries", " 7 ")).orElseThrow()
-                .singleValue());
+                .value());
     }
 
     @Test
