@@ -37,6 +37,14 @@ import java.nio.file.Path;
  * and the SDK holding it is what made storing project data a privilege of plugin #1. Any plugin that wants
  * to keep data with a project depends on {@code botmaker-plugin-basics} the way {@code botmaker-sdk} does.
  *
+ * <h2>It no longer names a file</h2>
+ *
+ * <p>{@code RESOURCE}, {@code FILE}, {@code current()} and {@code use(…)} went on 2026-09-21 with
+ * {@code activities.json} itself. They were the one place this class knew a file name, and they were there
+ * because a running bot read its parameters and its activity flags out of that file; both are values in the
+ * bot's own Java now. What is left is I/O over a path or a classpath resource somebody else names — which
+ * is what {@link PluginData} does, and what this class was always meant to be underneath.
+ *
  * <h2>Nothing here throws while reading</h2>
  *
  * <p>A missing file, an unreadable one and a document that is not an object are ordinary states with an
@@ -45,24 +53,10 @@ import java.nio.file.Path;
  */
 public final class ProjectStore {
 
-    /**
-     * Where the project file that predates the folder tree sits on a bot's classpath.
-     *
-     * <p>Still read, because the SDK's activities and flow are still in it: the readers that move are
-     * phases 6c to 6f of the plan, and until then this is where a running bot finds them. Nothing writes a
-     * plugin's <em>data</em> here any more — that is {@link PluginData}.
-     */
-    public static final String RESOURCE = "/activities.json";
-
-    /** Its name inside a project's resources directory, for whoever is writing it. */
-    public static final String FILE = "activities.json";
-
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
 
     private static final ProjectStore EMPTY = new ProjectStore(MAPPER.createObjectNode());
-
-    private static ProjectStore current;
 
     private final JsonNode root;
 
@@ -71,23 +65,6 @@ public final class ProjectStore {
     }
 
     // ---- loading ----------------------------------------------------------------------------------------
-
-    /**
-     * This bot's own store, parsed once and held for the life of the process.
-     *
-     * <p>A bot's configuration cannot change while it runs — the editor writes the file and the bot is
-     * restarted — so re-reading it would only make two ticks able to disagree.
-     */
-    public static synchronized ProjectStore current() {
-        if (current == null) current = load(RESOURCE);
-        return current;
-    }
-
-    /** Test seam: make {@code store} what {@link #current()} answers, or {@code null} to read again. */
-    public static synchronized void use(ProjectStore store) {
-        current = store;
-        ProjectValues.use(null);
-    }
 
     /**
      * The store at {@code resource} on the classpath, or an empty one.

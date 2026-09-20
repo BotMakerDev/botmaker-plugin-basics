@@ -68,10 +68,8 @@ class ProjectStoreTest {
         assertEquals(1, store.root().path("a").asInt());
     }
 
-    /** The values a bot reads are one document's, and today that document is one plugin's own file. */
-    @Test
-    void theValuesAreOneDocument() {
-        assertEquals(List.of("90s"), ProjectValues.in(ProjectStore.of(DOCUMENT)).many("rest"));
-        assertEquals(List.of(), ProjectValues.in(null).variables());
-    }
+    // theValuesAreOneDocument stood here until 2026-09-21. It asserted that ProjectValues read a bot's
+    // variables out of one document; there is no ProjectValues, because a user parameter is a @Param field
+    // in the bot's own Java and an activity's enable flag is part of the installed Flow. What this class
+    // still covers is what is left: I/O over a path or a classpath resource somebody else names.
 }

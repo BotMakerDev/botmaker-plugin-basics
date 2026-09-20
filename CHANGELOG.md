@@ -9,7 +9,26 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
-No source changes since v0.0.5; re-released for updated upstream pins.
+### Removed
+
+- **`Settings.load`, `loadAll`, `enabled`, `declares` and `use`, with `ValueGrammar`, `BasicsGrammar` and
+  the `ServiceLoader` that found them.** They read a bot's parameters and its activity enable flags out of
+  `activities.json`. Neither lives there any more: a user parameter is a `@Param` field in the bot's own
+  Java and an activity's enable flag is part of the `Flow` value the bot installs, so both are typed by
+  javac and neither can be a name that silently matches nothing. Deleted rather than deprecated, because a
+  kept method whose only data source has been removed answers a fallback on every call — which is a bot
+  that runs on defaults and never says so, and is strictly worse than a compile error naming the line.
+
+- **`ProjectValues` whole**, and `ProjectStore.RESOURCE`, `FILE`, `current()` and `use(…)` with it. They
+  were the reader of that file and the one place `ProjectStore` knew a file name.
+
+### Kept
+
+- **`Settings.forPlugin(id)`** — a bot reading a plugin's own stored state, resolved from the id and the
+  name off its classpath. Unchanged, and now the whole of what `Settings` is.
+
+- **`PluginData`'s paths and `ProjectStore`'s I/O.** A plugin's own JSON under
+  `plugins/<id prefix>/<last segment>/` is untouched by any of this.
 
 No source changes since v0.0.4; re-released for updated upstream pins.
 

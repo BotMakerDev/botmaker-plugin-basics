@@ -357,16 +357,18 @@ class ParameterStoreTest {
     // host no longer declares a row here, because a user parameter is a @Param field in the bot's own Java.
     // The verbs those tests reached through are still covered one at a time above.
 
-    /** What a bot reads is the same file, resolved from the id and the name, and answered as text. */
+    /**
+     * What a bot reads is the same file, resolved from the id and the name.
+     *
+     * <p>It read it as <em>untyped text</em> through {@code ProjectValues} until 2026-09-21, which is the
+     * half of that class that went with {@code activities.json}. The path is what mattered and the path is
+     * unchanged: {@code Settings.forPlugin(id).read(name, …)} resolves exactly this resource.
+     */
     @Test
-    void aBotReadsTheSameFileAsUntypedText(@TempDir Path dir) {
+    void aBotResolvesTheSameFileFromTheIdAndTheName(@TempDir Path dir) {
         retries(dir);
 
-        ProjectValues values = ProjectValues.in(ProjectStore.read(file(dir)));
-
-        assertTrue(values.declares("retries"));
-        assertEquals("2", values.one("retries"));
-        assertEquals("WHOLE_NUMBER", values.typeId("retries"));
+        assertTrue(Files.isRegularFile(file(dir)));
         assertEquals("/plugins/com.example/tests/parameters.json",
                 PluginData.resource(PLUGIN, PluginData.PARAMETERS));
     }
