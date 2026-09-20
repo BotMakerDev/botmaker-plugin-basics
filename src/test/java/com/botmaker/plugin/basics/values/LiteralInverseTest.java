@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code wireOfLiteral} against the literal it undoes — the property a user parameter's value cell depends
+ * {@code valueOfLiteral} against the literal it undoes — the property a user parameter's value cell depends
  * on, since a {@code @Param} field's value <em>is</em> its initialiser.
  *
  * <p>The contract's rule is a round trip, so this test is mostly that rule applied to every one of the nine
@@ -23,7 +23,7 @@ class LiteralInverseTest {
 
     private static final ValueCatalog CATALOG = BasicsValueTypes.CATALOG;
 
-    /** Every type, every sample: {@code wireOfLiteral(literal(parse(wire)))} == {@code store(parse(wire))}. */
+    /** Every type, every sample: {@code store(valueOfLiteral(literal(parse(wire))))} == {@code store(parse(wire))}. */
     @Test
     void everyTypeReadsBackWhatItWrote() {
         record Sample(ValueType type, String wire) {}
@@ -32,6 +32,10 @@ class LiteralInverseTest {
                 new Sample(BasicsValueTypes.TEXT, ""),
                 new Sample(BasicsValueTypes.TEXT, "a \"quoted\" \\ back\nslash\ttab"),
                 new Sample(BasicsValueTypes.TEXT, "comma, inside"),
+                // A control character, which a user pastes without ever seeing it. The writer escapes it as
+                // \\u0007 and the reader refused that escape until 2026-09-20 — so exactly the values
+                // nobody can see were the ones written and then shown read-only.
+                new Sample(BasicsValueTypes.TEXT, "bell\u0007 and del\u007f"),
                 new Sample(BasicsValueTypes.YES_NO, "true"),
                 new Sample(BasicsValueTypes.YES_NO, "false"),
                 new Sample(BasicsValueTypes.WHOLE_NUMBER, "0"),

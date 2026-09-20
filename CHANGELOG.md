@@ -17,6 +17,16 @@ No source changes since v0.0.3; re-released for updated upstream pins.
 
 No source changes since v0.0.2; re-released for updated upstream pins.
 
+### Changed
+
+- **The nine codecs are built with `Codecs.of` and read text through `Source`.** Each answers a *value*
+  rather than a stored string, following the contract's `ValueCodec.valueOfLiteral`, which replaces
+  `wireOfLiteral`; the string and character inverses are the toolkit's `Source.stringValue`/
+  `characterValue` — the same file as the escaping they undo, rather than a second copy of it here. One
+  thing changes behaviour: a pasted control character is written as `\u0007` and now reads back, where the
+  private reader this replaces refused that escape, so exactly the values nobody can see were the ones
+  written and then shown read-only.
+
 ### Added
 
 - **`@Param`** (`com.botmaker.plugin.basics.params.Param`) — a user parameter is a field in the bot's own
