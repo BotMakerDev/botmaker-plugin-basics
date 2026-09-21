@@ -9,7 +9,19 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
-No source changes since v0.0.7; re-released for updated upstream pins.
+### Added
+
+- **`managed/ManagedValues`** — hands a bot's `@Managed` values to the plugins that own them, so no bot
+  writes an `install()`. `claim(id, sink)` is a plugin's library half saying it takes an id; `install(Class…)`
+  invokes every `public static` no-argument `@Managed` method on each class named and dispatches what it
+  returns. It sits beside `@Managed` because that is where the annotation lives and both are on every bot's
+  classpath.
+  An unclaimed id, a method that throws and a values class that cannot be read are each one line on
+  `System.err` and never a throw — the first is the ordinary state of a bot whose pom no longer names that
+  plugin. `@Managed` on a *type* installs nothing: it marks constants the bot names at its use sites.
+  **Claim ordering needs no registry file**: `install` invokes a method before dispatching its value, and
+  invoking links the declared return type, so a plugin claiming from that type's static initialiser is
+  always registered in time.
 
 ### Changed
 
