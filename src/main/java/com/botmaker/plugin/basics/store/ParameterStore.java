@@ -1,7 +1,7 @@
 package com.botmaker.plugin.basics.store;
 
-import com.botmaker.plugin.api.ParameterEdit;
-import com.botmaker.plugin.api.ParameterRow;
+import com.botmaker.plugin.api.parameters.ParameterEdit;
+import com.botmaker.plugin.api.parameters.ParameterRow;
 import com.botmaker.plugin.api.value.Range;
 import com.botmaker.plugin.api.value.ValueCatalog;
 import com.botmaker.plugin.api.value.ValueForm;
