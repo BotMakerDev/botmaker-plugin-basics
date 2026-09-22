@@ -23,6 +23,21 @@ heading in that module's own release commit.
   invoking links the declared return type, so a plugin claiming from that type's static initialiser is
   always registered in time.
 
+### Removed
+
+- **`store/ParameterStore` (582 lines) and `store/StoredForms`**, with `PluginData.PARAMETERS`. A plugin was
+  to declare its rows through `ParameterStore.declare` and the host was to read them back through the
+  contract. **`declare` had no caller anywhere** — not in this module, not in the SDK, not in Studio — so the
+  only rows the store ever returned were whatever sat in a project written before 2026-09-17, and the file it
+  kept them in was never written again. A second reader of a format nothing writes is what the umbrella
+  `CLAUDE.md` forbids by name; it is the same failure shape as `ValueCodec.wireOfLiteral`, and here the half
+  nobody wrote was the writing half.
+  A parameter is a `@Param` static field in the bot's own Java, read and written off the syntax tree.
+  **A plugin that wants a row of its own puts a `@Param` field in the file it ships** — the host's walk of
+  the bot's sources finds it with no store, no file format and no contract surface.
+  `Settings` and `ValueGrammar` are untouched: a plugin's own flags are not rows, and a running bot still
+  reads them.
+
 ### Changed
 
 - **Recompiled against the contract's new packages** — imports only, no behaviour change. See

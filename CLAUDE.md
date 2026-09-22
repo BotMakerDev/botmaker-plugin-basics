@@ -53,25 +53,30 @@ It owns three things, all three landed on 2026-09-09.
    so a project written before the tree reads as empty; nothing deletes it either, so a converter is
    writable later.
 
-4. **`ParameterStore`** — how *any* plugin declares parameters, added 2026-09-10 and generalised out of the
-   SDK, where it was `SdkParameters`. Rows in, rows out, and the coercion between: canonicalise through the
-   owning type's codec, clamp to a declared `Range`, prune a value to the options still on offer, seed a
-   fresh one with the type's default. A plugin declares a `ParameterGroup`, holds one of these over its own
-   `PluginData`, and hands the host back what `rows(groupId)` answers. It names the contract, so it is
-   editor-only and exempted in `BasicsIsBotSafeTest`. **A bot no longer reads that file at all** —
-   `ProjectValues` is deleted (2026-09-21) — so `parameters.json` is editor state, and a plugin that wants
-   a value in the bot's hands ships Java for it instead.
+4. **`ParameterStore` stood here from 2026-09-10 to 2026-09-22 and is deleted, with `StoredForms` and
+   `PluginData.PARAMETERS`.** It was how *any* plugin was to declare parameters — rows in, rows out, and the
+   coercion between: canonicalise through the owning type's codec, clamp to a declared `Range`, prune a value
+   to the options still on offer, seed a fresh one with the type's default. 582 lines, generalised out of the
+   SDK where it was `SdkParameters`, and defended at length the week it landed.
 
-   It is still built on `ValueCatalog.initializerOfWires`, `wiresOfInitializer`, `defaultItem`, `normalize`
-   and `StoredForms`, at nine call sites. Those were listed for deletion as legacy and are not: porting
-   this store onto the form/value pair is a phase of its own.
+   **Nothing ever called `declare`.** Not this module, not the SDK, not Studio. So the only rows it ever
+   returned were whatever a project written before 2026-09-17 already had in
+   `plugins/<prefix>/<segment>/parameters.json`, and nothing wrote that file again. *A converter is a second
+   reader of a format nothing writes* — the umbrella `CLAUDE.md` forbids it by name, and this was one. It is
+   the same failure shape as `ValueCodec.wireOfLiteral`, which this file already records: **the half nobody is
+   forced to write is the half that rots.** Here the rotted half was the writing half, so the reading half had
+   nothing to read.
 
-   **The verbs are the owning plugin's own, and only a value crosses from outside** (2026-09-17).
-   `declared(ParameterDeclaration)` is deleted with the contract method it implemented: a *user* parameter
-   is a `@Param` field now and the host writes it there, so what a host may still do to one of these rows
-   is `apply(ParameterEdit)` — change its value — and the nine verbs (`declare`, `rename`, `retype`,
-   `setOptions`, `setBounds`, `setCategory`, `setVisibility`, `setDescription`, `remove`) are called by the
-   plugin that owns the group, from its own code. They stay public and are never deleted.
+   **What replaced it had already replaced it.** A user parameter became a `@Param` field in the bot's own
+   Java on 2026-09-17, read and written off the syntax tree. The case this store was kept for — *a plugin's
+   own row, an activity's enable flag, a capture target* — has the better answer on the same terms: **the
+   plugin puts a `@Param` field in the file it ships**, and the host's ordinary walk of the bot's sources
+   finds it. One file format, one editor, and a row the bot's author can read.
+
+   The contract half went with it (`ParameterGroup`, `ParameterEdit`, `StudioPlugin.parameters(String)`,
+   `parameterRows(String)`, `parameterEdited(…)`); `ParameterRow` stays as the shape one row crosses in.
+   `ValueCatalog.initializerOfWires`, `wiresOfInitializer`, `defaultItem` and `normalize` lost their nine
+   call sites here, which is the porting phase that was owed and is now moot.
 
 5. **`@Managed`**, in `com.botmaker.plugin.basics.managed`, added 2026-09-21. One member, the plugin-local
    id; `@Target({TYPE, METHOD})`. On a `public static` method it says *the host owns the expression this

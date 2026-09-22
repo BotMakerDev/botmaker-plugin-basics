@@ -26,8 +26,8 @@ class PluginDataTest {
     void theTreeIsDerivedFromTheIdAlone(@TempDir Path dir) {
         assertEquals(dir.resolve("plugins/com.botmaker/sdk"),
                 PluginData.of(dir, "com.botmaker.sdk").folder());
-        assertEquals(dir.resolve("plugins/com.botmaker/basics/parameters.json"),
-                PluginData.of(dir, PluginData.BASICS_ID).file(PluginData.PARAMETERS));
+        assertEquals(dir.resolve("plugins/com.botmaker/basics/settings.json"),
+                PluginData.of(dir, PluginData.BASICS_ID).file("settings"));
     }
 
     /** An id with no author in it has no author folder to invent. */
@@ -86,8 +86,8 @@ class PluginDataTest {
     /** A bot resolves one resource path from the id and the name, and never lists a directory. */
     @Test
     void aBotResolvesOnePathWithoutScanning() {
-        assertEquals("/plugins/com.botmaker/sdk/parameters.json",
-                PluginData.resource("com.botmaker.sdk", PluginData.PARAMETERS));
+        assertEquals("/plugins/com.botmaker/sdk/settings.json",
+                PluginData.resource("com.botmaker.sdk", "settings"));
         assertEquals("/plugins/discord/webhooks.json",
                 PluginData.resource("discord", "Webhooks.json"));
     }

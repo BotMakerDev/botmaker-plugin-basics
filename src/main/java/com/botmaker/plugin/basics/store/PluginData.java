@@ -53,8 +53,9 @@ public final class PluginData {
     /** The one directory under a project's resources that holds every plugin's data. */
     public static final String ROOT = "plugins";
 
-    /** The file a {@link ParameterStore} keeps its rows in. */
-    public static final String PARAMETERS = "parameters";
+    // PARAMETERS = "parameters" stood here from 2026-09-10 to 2026-09-22, naming the file ParameterStore
+    // kept a plugin's rows in. Both are gone: a parameter is a @Param field in the bot's own Java, so there
+    // is no rows file to name. A plugin still names its own files here — Settings does — just not that one.
 
     /**
      * This plugin's own id.

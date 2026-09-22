@@ -52,7 +52,7 @@ class BasicsPluginTest {
         // let the project open.
         assertTrue(plugin.catalog(null).problems().isEmpty(), plugin.catalog(null).problems().toString());
         assertTrue(plugin.slotEditors().isEmpty());
-        assertTrue(plugin.parameters(null).isEmpty());
+        assertTrue(plugin.toolbarItems().isEmpty());
     }
 
     @Test

@@ -17,11 +17,15 @@ import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
  *
  * <p><b>It owns the store too</b>, since the same day: {@code com.botmaker.plugin.basics.store} — the
  * {@link PluginData} tree a project's plugins keep their files in, the
- * {@code Settings}/{@code ValueGrammar} pair a <em>running bot</em> reads its own parameters through, and
- * since 2026-09-10 the {@link com.botmaker.plugin.basics.store.ParameterStore} <em>any</em> plugin declares
- * parameters through. The first two arrived from {@code com.botmaker.plugin.toolkit.config}, where they had
- * spent a day; a widget kit owns no value types, so it could hold the mechanism only by promising never to
- * use it. The third arrived from the SDK, which is where plugin #1's last storage privilege was.
+ * {@code Settings}/{@code ValueGrammar} pair a <em>running bot</em> reads its own settings through. They
+ * arrived from {@code com.botmaker.plugin.toolkit.config}, where they had spent a day; a widget kit owns no
+ * value types, so it could hold the mechanism only by promising never to use it.
+ *
+ * <p><b>A third class stood beside them from 2026-09-10 to 2026-09-22 and is deleted</b>:
+ * {@code ParameterStore}, which <em>any</em> plugin was to declare parameters through. Nothing ever called
+ * its {@code declare}, so what the host read back was a pre-2026-09-17 project's JSON and nothing else. A
+ * parameter is a {@code @Param} field in the bot's own Java now — including a plugin's own, in the file the
+ * plugin ships — so there is no rows file and no store for one.
  *
  * <p>What is left for a later phase is moving the SDK plugin's own activities, flow and presets into files
  * of their own in that tree.
