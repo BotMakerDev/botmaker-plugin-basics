@@ -1,5 +1,6 @@
 package com.botmaker.plugin.basics.params;
 
+import com.botmaker.plugin.api.params.Param;
 import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.ElementType;
@@ -31,7 +32,7 @@ class ParamAnnotationTest {
         public static Duration plain = Duration.ofSeconds(3);
 
         @Param(category = "Limits", description = "How many times to try",
-                visibility = Param.PUBLIC, min = "1", max = "50")
+                visibility = Param.PUBLIC, min = 1, max = 50)
         public static int described = 10;
 
         @Param(options = {"fast", "slow"})
@@ -58,8 +59,10 @@ class ParamAnnotationTest {
         Param param = Fixture.class.getField("plain").getAnnotation(Param.class);
         assertEquals("", param.category());
         assertEquals("", param.description());
-        assertEquals("", param.min());
-        assertEquals("", param.max());
+        // Both ends absent, and absent independently: "at most 10" is a sentence a person says, and it was
+        // unsayable while the widget only appeared with both filled in.
+        assertEquals(Double.NEGATIVE_INFINITY, param.min());
+        assertEquals(Double.POSITIVE_INFINITY, param.max());
         assertEquals(0, param.options().length);
         // The default is the narrower of the two: a parameter nobody classified is not in the Runner.
         assertEquals(Param.EDITOR, param.visibility());
@@ -71,8 +74,10 @@ class ParamAnnotationTest {
         assertEquals("Limits", param.category());
         assertEquals("How many times to try", param.description());
         assertEquals(Param.PUBLIC, param.visibility());
-        assertEquals("1", param.min());
-        assertEquals("50", param.max());
+        // Numbers since 2026-09-22. They were strings so a duration bound could be written "30s" and a
+        // codec would parse it — and no plugin parses anything now.
+        assertEquals(1.0, param.min());
+        assertEquals(50.0, param.max());
 
         assertArrayEquals(new String[] {"fast", "slow"},
                 Fixture.class.getField("chosen").getAnnotation(Param.class).options());

@@ -1,5 +1,7 @@
 package com.botmaker.plugin.basics.managed;
 
+import com.botmaker.plugin.api.managed.Managed;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;

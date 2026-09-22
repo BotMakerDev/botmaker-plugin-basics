@@ -1,5 +1,6 @@
 package com.botmaker.plugin.basics.managed;
 
+import com.botmaker.plugin.api.managed.Managed;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

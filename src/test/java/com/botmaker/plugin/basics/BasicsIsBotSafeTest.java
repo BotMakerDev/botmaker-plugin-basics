@@ -41,19 +41,37 @@ class BasicsIsBotSafeTest {
     /**
      * The editor-side classes, which a bot never loads.
      *
-     * <p>{@code BasicsPlugin} <em>is</em> the contract implementation, and {@code BasicsValueTypes} holds the
-     * registrations, the labels and the Java literals — everything only a host or a generator asks for.
-     * Both are in the same jar as the bot-safe half, exactly as {@code SdkPlugin} sits in the SDK's jar:
-     * what matters is that nothing a bot links reaches them.
+     * <p>{@code BasicsPlugin} <em>is</em> the contract implementation; {@code BasicsTypes} declares the nine
+     * and {@code BasicsEditors} draws them, which is everything only a host asks for. All three are in the
+     * same jar as the bot-safe half, exactly as {@code SdkPlugin} sits in the SDK's jar: what matters is
+     * that nothing a bot links reaches them.
      *
      * <p>{@code ParameterStore} and {@code StoredForms} were exempted here too, from 2026-09-10 and
-     * 2026-09-20. Both are deleted: a parameter is a {@code @Param} field in the bot's own Java, so no
-     * plugin keeps a rows file and nothing decodes a stored {@code ValueForm}.
+     * 2026-09-20; {@code JdkText} and {@code BasicsValueTypes} were the bot-safe and editor-side halves of
+     * the stored-text reader. All four are deleted: a parameter is a {@code @Param} field in the bot's own
+     * Java and a value is the Java that writes it, so nothing stores text and nothing reads any back.
      */
-    private static final Set<String> EDITOR_ONLY = Set.of("BasicsPlugin.java", "BasicsValueTypes.java");
+    private static final Set<String> EDITOR_ONLY =
+            Set.of("BasicsPlugin.java", "BasicsTypes.java", "BasicsEditors.java");
 
     /** What a bot's classpath does not have. Javadoc mentions are fine; a source reference is not. */
     private static final List<String> BANNED = List.of("com.botmaker.plugin.api", "javafx.");
+
+    /**
+     * The two contract packages that <b>are</b> on a bot's classpath, deliberately, since 2026-09-22.
+     *
+     * <p>{@code @Param} sits on a bot's own fields and {@code @Managed} on a bot's own methods, so they
+     * were held in this module precisely because the rest of the contract is {@code provided} and absent
+     * from a bot. They are the contract's now and the SDK brings them at {@code compile}, which is what
+     * {@code ManagedValues} — bot-side, and the thing that reads {@code @Managed} at run time — reflects
+     * against.
+     *
+     * <p><b>The exemption is by package and stays that way.</b> Naming the two that travel is the same
+     * shape as {@code EDITOR_ONLY} above and errs in the same direction: a third contract package reaching
+     * a bot is a red test rather than a {@code NoClassDefFoundError} in a stranger's bot.
+     */
+    private static final List<String> ON_A_BOT = List.of(
+            "com.botmaker.plugin.api.params", "com.botmaker.plugin.api.managed");
 
     @Test
     void everyExemptedFileStillExists() throws IOException {
@@ -75,7 +93,7 @@ class BasicsIsBotSafeTest {
                 String line = lines.get(i);
                 if (isComment(line)) continue;
                 for (String banned : BANNED) {
-                    if (line.contains(banned)) {
+                    if (line.contains(banned) && !travelsToABot(line)) {
                         offences.add(file.getFileName() + ":" + (i + 1) + " names " + banned);
                     }
                 }
@@ -83,6 +101,11 @@ class BasicsIsBotSafeTest {
         }
         assertEquals(List.of(), offences,
                 "this jar is on every bot's classpath, and a bot has neither the contract nor JavaFX");
+    }
+
+    /** Whether the line names one of the two contract packages a bot genuinely has. */
+    private static boolean travelsToABot(String line) {
+        return ON_A_BOT.stream().anyMatch(line::contains);
     }
 
     /**

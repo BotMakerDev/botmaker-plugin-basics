@@ -9,8 +9,34 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
+### Added
+
+- **`values/BasicsTypes`** — the nine, one class each, every method abstract: the class it is, a `fresh()`
+  that returns a real value rather than a Java expression as text, and the editor. `Color`, `LocalDate`,
+  `LocalTime` and `Duration` also implement `ComponentType`, which is what the host writes
+  `java.time.Duration.ofMillis(3000L)` and `new java.awt.Color(255, 0, 0)` from — the *components*, never a
+  `decode(…)` or a `parse(…)` that can throw at class initialisation.
+- **`values/BasicsEditors`** — the widgets for those nine, lifted out of Studio's own `ValueEditors`, which
+  drew them off a value-type id. A `switch` on `"DATE"` in the host is the host holding one plugin's
+  vocabulary; basics declares the type, so basics draws it. Nothing here is generic and nothing here is
+  meant to be: the reusable shapes stay in `botmaker-plugin-toolkit`.
+
 ### Removed
 
+- **`values/JdkText` and `values/BasicsValueTypes`**, the two halves of the stored-text reader. Nothing
+  stores text: a user parameter is a `@Param` field (2026-09-17) and a plugin's values are `@Managed`
+  methods (2026-09-21), so `parse` and `store` had no caller. The writing half that *was* still wired was
+  wrong — a leaf round-tripped Java through wire text through `literal(parse(java))`, and a
+  `java.awt.Color` parameter opened and closed with no edit came back rewritten.
+- **`params/Param` and `managed/Managed`**, moved to `com.botmaker.plugin.api.params` and
+  `…api.managed`. They were held here because this module declares the contract `provided` and a bot
+  therefore had no contract jar, and both annotations land on a bot's *own* declarations. The SDK brings
+  the contract at `compile` now. `ManagedValues` — bot-side, and the thing that reads `@Managed` at run
+  time — reflects against the contract's copy, and `BasicsIsBotSafeTest` names those two packages as the
+  ones that legitimately travel to a bot.
+- **The persisted value-type ids** (`TEXT`, `YES_NO`, `DURATION`, …) with `ValueType`. The identity is the
+  Java class a field is declared as, and has been since a parameter became a `@Param` field; the ids were
+  the last thing still reading the enum vocabulary and nothing wrote one.
 - **`store/ProjectStore` and `store/PluginStore`, folded into `PluginData`.** They were two layers under
   one file name, built for a store with several customers, and they ended with one and a half:
   `FlowLayout`'s card positions and `Settings.forPlugin`. Everything else they held now lives in the bot's
