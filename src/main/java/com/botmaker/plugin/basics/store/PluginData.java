@@ -1,11 +1,18 @@
 package com.botmaker.plugin.basics.store;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * Where a plugin's data lives inside a project, and how it names a file of its own.
@@ -45,6 +52,26 @@ import java.util.Locale;
  * {@code "Parameters"}, {@code "parameters"} and {@code "parameters.json"} are one file rather than three
  * that shadow each other depending on which reader asked.
  *
+ * <h2>The whole of it is here now</h2>
+ *
+ * <p>Until 2026-09-22 this class was the middle of three: {@code ProjectStore} held one JSON document and
+ * did the I/O, {@code PluginStore} wrapped it to read and write a plugin's own records, and this named the
+ * file. That layering was built for a store with several customers and it ended with one and a half —
+ * {@code FlowLayout} writing the flow editor's card positions, and {@code Settings.forPlugin} reading a
+ * plugin's state off a bot's classpath. Everything else that used it now lives in the bot's own Java: a
+ * parameter is a {@code @Param} field, a plugin's value is a {@code @Managed} method, the flow is a
+ * {@code Flow}, and the capture source went the same way in the change that collapsed these three.
+ *
+ * <p>So the two layers folded in. What survives is exactly the four operations those two callers make —
+ * {@link #read}, {@link #write}, {@link #load} and {@link #convert} — and the answers each of them gives on
+ * failure are the ones {@code ProjectStore} and {@code PluginStore} gave, kept verbatim rather than
+ * re-decided: <b>reading is total and writing throws</b>. A plugin asking for data it has never stored is
+ * the ordinary first call; a save that silently did not happen is the one failure a user cannot see.
+ *
+ * <p>There is still <b>no legacy fallback</b> and no migration. A project written before the folder tree
+ * holds data nothing reads; nothing deletes it, and a converter would be a second reader of a format
+ * nothing writes.
+ *
  * <p>This class is bot-safe: it names no contract type and no JavaFX, because a running bot resolves its own
  * files through it.
  */
@@ -67,6 +94,22 @@ public final class PluginData {
     public static final String BASICS_ID = "com.botmaker.basics";
 
     private static final String SUFFIX = ".json";
+
+    /**
+     * One mapper for the whole class, configured twice over and for two different reasons.
+     *
+     * <p>{@code INDENT_OUTPUT} is so a stored file is one a human can read in a diff — these sit in a user's
+     * git repository. {@code FAIL_ON_UNKNOWN_PROPERTIES} off is the compatibility rule {@link #convert}
+     * states: a plugin that drops a field can still read files an older version of itself wrote. Nothing
+     * else is enabled — a store that accepted comments, single quotes or trailing commas would be writing a
+     * dialect only it can read.
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .enable(SerializationFeature.INDENT_OUTPUT)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+    /** What every total read answers when there is nothing to read: an empty object, never {@code null}. */
+    private static final JsonNode EMPTY = MAPPER.createObjectNode();
 
     private final Path resourcesDir;
     private final String pluginId;
@@ -105,14 +148,24 @@ public final class PluginData {
     }
 
     /**
-     * The document stored under {@code name}, or an empty one.
+     * The document stored under {@code name}, or an empty object.
      *
-     * <p>Absent, unreadable and unparseable all read as empty, which is {@link ProjectStore}'s rule and the
-     * reason it is the thing being returned: a plugin asking for data it has never stored is the ordinary
-     * first call, not a failure.
+     * <p>Absent, unreadable and unparseable all read as empty, and never {@code null}: a plugin asking for
+     * data it has never stored is the ordinary first call, not a failure. An unparseable file says so on
+     * {@code System.err} once, because that is a real mistake somebody can act on — and still yields empty,
+     * since a bot that refuses to start tells its user far less than one that starts and reports empty
+     * configuration.
      */
-    public ProjectStore read(String name) {
-        return ProjectStore.read(file(name));
+    public JsonNode read(String name) {
+        Path file = file(name);
+        if (!Files.isRegularFile(file)) return EMPTY;
+        try {
+            return MAPPER.readTree(Files.readString(file, StandardCharsets.UTF_8));
+        } catch (Exception unreadable) {
+            System.err.println("[store] " + file + " could not be read (" + unreadable.getMessage()
+                    + "); running with no configuration");
+            return EMPTY;
+        }
     }
 
     /**
@@ -121,7 +174,11 @@ public final class PluginData {
      * <p>Throws, unlike reading. A save that silently did not happen is the one failure a user cannot see.
      */
     public void write(String name, JsonNode document) throws IOException {
-        ProjectStore.of(document).write(file(name));
+        Path file = file(name);
+        Path parent = file.getParent();
+        if (parent != null) Files.createDirectories(parent);
+        Files.writeString(file, MAPPER.writeValueAsString(document == null ? EMPTY : document) + "\n",
+                StandardCharsets.UTF_8);
     }
 
     /** Whether this plugin has stored anything under {@code name} yet. */
@@ -130,15 +187,61 @@ public final class PluginData {
     }
 
     /**
-     * Where a bot finds {@code name} on its classpath — {@code /plugins/com.botmaker/sdk/parameters.json}.
+     * Where a bot finds {@code name} on its classpath — {@code /plugins/com.botmaker/sdk/settings.json}.
      *
      * <p>Static and taking the id, because the bot side has no project directory and must not scan: it
-     * resolves the one path it knows it wants and reads it, exactly as {@link ProjectStore#load} does.
+     * resolves the one path it knows it wants and reads it, which is what {@link #load} then does.
      */
     public static String resource(String pluginId, String name) {
         StringBuilder path = new StringBuilder("/").append(ROOT);
         for (String segment : segments(requireId(pluginId))) path.append('/').append(segment);
         return path.append('/').append(normalize(name)).append(SUFFIX).toString();
+    }
+
+    /**
+     * What {@code pluginId} stored under {@code name}, read off <b>this bot's classpath</b>, or an empty
+     * object — the bot side of {@link #read}.
+     *
+     * <p>The two failures are told apart on purpose. A <b>missing</b> resource is silent: a bot whose
+     * plugin has stored nothing is not misconfigured, and it is the ordinary case. A resource that exists
+     * and will not parse says so once, for the same reason {@link #read} does.
+     *
+     * <p>{@link Settings#forPlugin} is what a bot author calls; this is the one line underneath it.
+     */
+    public static JsonNode load(String pluginId, String name) {
+        String path = resource(pluginId, name);
+        try (InputStream in = PluginData.class.getResourceAsStream(path)) {
+            if (in == null) return EMPTY;
+            return MAPPER.readTree(in);
+        } catch (Exception unreadable) {
+            System.err.println("[store] " + path + " could not be read (" + unreadable.getMessage()
+                    + "); running with no configuration");
+            return EMPTY;
+        }
+    }
+
+    /**
+     * {@code node} as {@code type}, or empty — the one conversion both sides of a typed read go through.
+     *
+     * <p>A shape mismatch is empty, never an exception. A field the record does not declare is ignored, so
+     * a plugin that drops a field can still read files an older version of itself wrote; a field the record
+     * declares and the document omits gets the type's own default.
+     *
+     * <p><b>An empty document reads as empty too</b>, and that is a decision rather than an accident: a
+     * missing file, an unparseable one and {@code {}} all arrive here as an empty object, and converting
+     * that would hand a plugin a record full of nulls it cannot tell from one it stored. A plugin with
+     * genuinely nothing to say stores nothing.
+     */
+    public static <T> Optional<T> convert(JsonNode node, Class<T> type) {
+        if (node == null || node.isNull() || node.isMissingNode()
+                || (node.isContainerNode() && node.isEmpty())) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.ofNullable(MAPPER.treeToValue(node, type));
+        } catch (JsonProcessingException | IllegalArgumentException mismatched) {
+            return Optional.empty();
+        }
     }
 
     /**

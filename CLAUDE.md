@@ -34,13 +34,23 @@ It owns three things, all three landed on 2026-09-09.
    `JdkText` stays and is still the grammar for this module's nine types — it is what parses the text a
    user types into a cell, which is a live question. What is gone is the registry that let a *bot* look one
    up by name.
-3. **The project store** — `PluginData` and `ProjectStore`. A plugin's data is a **folder of its own files**,
-   `plugins/<id prefix>/<last segment>/<name>.json` inside the project's resources, so `com.botmaker.sdk`
-   writes under `plugins/com.botmaker/sdk/`: a folder per author and a folder per plugin, derived from the
-   id alone with no new metadata. `ProjectStore` is one of those files, read totally and written whole;
-   `PluginData` is the layout, the creation on demand and the name normalisation that stops `Activities` and
-   `activities` becoming two files. **A bot enumerates nothing** — `PluginData.resource(id, name)` resolves
-   one classpath path, which is what makes a tree readable from inside a jar.
+3. **The project store** — `PluginData`, and since 2026-09-22 it is the whole of it. A plugin's data is a
+   **folder of its own files**, `plugins/<id prefix>/<last segment>/<name>.json` inside the project's
+   resources, so `com.botmaker.sdk` writes under `plugins/com.botmaker/sdk/`: a folder per author and a
+   folder per plugin, derived from the id alone with no new metadata. `PluginData` is the layout, the
+   creation on demand, the name normalisation that stops `Activities` and `activities` becoming two files,
+   and the four operations over one file: `read` (a `JsonNode` from a directory), `write`, `load` (the same
+   document off a bot's classpath) and `convert` (a document as a record). **A bot enumerates nothing** —
+   `PluginData.resource(id, name)` resolves one classpath path, which is what makes a tree readable from
+   inside a jar.
+
+   It was **three classes until 2026-09-22**: `ProjectStore` held one document and did the I/O,
+   `PluginStore` wrapped it for typed reads and writes, and this named the file. That layering was built
+   for a store with several customers and ended with one and a half — `FlowLayout`'s card positions, and
+   `Settings.forPlugin` on the bot side. Everything else moved into the bot's own Java: a parameter is a
+   `@Param` field, a plugin's value is a `@Managed` method, the flow is a `Flow`, and the capture source
+   went the same way in the change that collapsed these. **Reading is total and writing throws** — those
+   answers are `ProjectStore`'s and `PluginStore`'s, kept verbatim rather than re-decided.
 
    It was **one file sectioned by owning plugin id** until 2026-09-10, with a `withSection` that carried
    every other plugin's section through so an editor without a plugin installed could not save that
@@ -89,11 +99,13 @@ It owns three things, all three landed on 2026-09-09.
    `StudioPlugin.managedFields()`, which matched on a *declared type* and guessed that a class of nothing
    but managed constants was managed whole — two inferences from shape, where this is a statement.
 
-6. **`@Param` and `PluginStore`**, added 2026-09-17, and together they are the split that matters now.
-   `com.botmaker.plugin.basics.params.Param` is how a **user parameter** is declared: a `public static`
-   field in the *bot's own Java*, which Studio reads off the syntax tree and whose initializer the value
-   cell rewrites. `PluginStore` (and `Settings.forPlugin` on the bot side) is how a **plugin's own state**
-   is stored: a record in, a record out, over `PluginData`'s tree.
+6. **`@Param` and `Settings.forPlugin`**, and together they are the split that matters now.
+   `com.botmaker.plugin.basics.params.Param` (2026-09-17) is how a **user parameter** is declared: a
+   `public static` field in the *bot's own Java*, which Studio reads off the syntax tree and whose
+   initializer the value cell rewrites. `Settings.forPlugin` — over `PluginData.load`/`convert` — is how a
+   bot reads a **plugin's own state**: a record out, off one resolved classpath path. The editor's side of
+   the same file is `PluginData.read`/`write`. `PluginStore` was the typed wrapper over both halves until
+   2026-09-22; it folded into `PluginData` when its last customer moved into Java.
 
    **The rule to hold on to, as it now stands: a user parameter is Java, a plugin's values are Java, and
    what is left in JSON is what a bot does not read.** It was *"a user parameter is Java; a plugin's state

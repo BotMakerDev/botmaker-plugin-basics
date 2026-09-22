@@ -41,14 +41,14 @@ class PluginDataTest {
     void aFileIsCreatedOnDemandAndReadsBack(@TempDir Path dir) throws IOException {
         PluginData data = PluginData.of(dir, "com.example.discord");
         assertFalse(data.has("webhooks"));
-        assertTrue(data.read("webhooks").root().isEmpty(), "nothing stored reads as an empty document");
+        assertTrue(data.read("webhooks").isEmpty(), "nothing stored reads as an empty document");
 
         data.write("webhooks", MAPPER.readTree("{\"url\": \"https://example.invalid/hook\"}"));
 
         assertTrue(data.has("webhooks"));
         assertTrue(Files.isRegularFile(dir.resolve("plugins/com.example/discord/webhooks.json")));
         assertEquals("https://example.invalid/hook",
-                data.read("webhooks").root().path("url").asText());
+                data.read("webhooks").path("url").asText());
     }
 
     /**
@@ -61,7 +61,7 @@ class PluginDataTest {
         data.write("Webhooks", MAPPER.readTree("{\"url\": \"one\"}"));
         data.write("webhooks.json", MAPPER.readTree("{\"url\": \"two\"}"));
 
-        assertEquals("two", data.read("WEBHOOKS").root().path("url").asText());
+        assertEquals("two", data.read("WEBHOOKS").path("url").asText());
         try (var files = Files.list(dir.resolve("plugins/com.example/discord"))) {
             assertEquals(1, files.count(), "two spellings became two files");
         }

@@ -46,15 +46,20 @@ import java.util.Optional;
  *
  * <h2>Every answer is total</h2>
  *
- * <p>Absent, unparseable and shaped-wrong all read as empty, which is {@link ProjectStore}'s rule. A plugin
+ * <p>Absent, unparseable and shaped-wrong all read as empty, which is {@link PluginData}'s rule. A plugin
  * asking for data it has never stored is the ordinary first call, not a failure.
+ *
+ * <p>Those answers used to come from {@code ProjectStore} and {@code PluginStore}, two layers underneath
+ * {@link PluginData}. Both were folded into it on 2026-09-22 when the last of their other customers moved
+ * into the bot's own Java; the answers are unchanged, and {@link PluginData#convert} is where they are now
+ * written down.
  */
 public final class Settings {
 
     private Settings() {}
 
     /**
-     * A plugin's own stored state, as the plugin's own records — the bot side of {@link PluginStore}.
+     * A plugin's own stored state, as the plugin's own records — the bot side of {@link PluginData}.
      *
      * <pre>{@code
      * record CaptureTargets(String window, List<String> images) {}
@@ -98,24 +103,20 @@ public final class Settings {
 
         /** What the plugin stored under {@code name}, as {@code type}, or empty. */
         public <T> Optional<T> read(String name, Class<T> type) {
-            return PluginStore.convert(document(name), type);
+            return PluginData.convert(PluginData.load(pluginId, name), type);
         }
 
         /** The list the plugin stored under {@code name}, or empty — a non-array document reads as empty. */
         public <T> List<T> readAll(String name, Class<T> type) {
-            JsonNode root = document(name);
+            JsonNode root = PluginData.load(pluginId, name);
             if (root == null || !root.isArray()) {
                 return List.of();
             }
             List<T> out = new ArrayList<>(root.size());
             for (JsonNode element : root) {
-                PluginStore.convert(element, type).ifPresent(out::add);
+                PluginData.convert(element, type).ifPresent(out::add);
             }
             return List.copyOf(out);
-        }
-
-        private JsonNode document(String name) {
-            return ProjectStore.load(PluginData.resource(pluginId, name)).root();
         }
     }
 

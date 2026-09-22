@@ -9,6 +9,20 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
+### Removed
+
+- **`store/ProjectStore` and `store/PluginStore`, folded into `PluginData`.** They were two layers under
+  one file name, built for a store with several customers, and they ended with one and a half:
+  `FlowLayout`'s card positions and `Settings.forPlugin`. Everything else they held now lives in the bot's
+  own Java — a parameter is a `@Param` field, a plugin's value is a `@Managed` method, the flow is a `Flow`,
+  and the capture source went the same way in this release.
+  `PluginData` gains `load(pluginId, name)` (the document off a bot's classpath) and `convert(node, type)`
+  (a document as a record); `read(name)` now answers the `JsonNode` directly rather than a wrapper, and
+  `write` does its own I/O. **Every failure answer is unchanged** — absent, unreadable, unparseable and
+  shape-wrong all read as empty, an unparseable file says so once on `System.err`, and writing throws. They
+  were kept verbatim rather than re-decided, so a plugin sees no difference. `Settings` is untouched in
+  shape and is still the only bot-side reader.
+
 ### Added
 
 - **`managed/ManagedValues`** — hands a bot's `@Managed` values to the plugins that own them, so no bot
