@@ -21,6 +21,12 @@ heading in that module's own release commit.
   vocabulary; basics declares the type, so basics draws it. Nothing here is generic and nothing here is
   meant to be: the reusable shapes stay in `botmaker-plugin-toolkit`.
 
+### Changed
+
+- **`LocalDate.of`, `LocalTime.of` and `Duration.ofMillis` are declared as the `Method`s they are**, the
+  contract's `ComponentType.factory()` being an `Executable` now; a date, a time and a duration are written
+  exactly as before.
+
 ### Removed
 
 - **`values/JdkText` and `values/BasicsValueTypes`**, the two halves of the stored-text reader. Nothing

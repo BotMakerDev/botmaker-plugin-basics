@@ -7,6 +7,8 @@ import com.botmaker.plugin.toolkit.AbstractPluginType;
 import javafx.scene.Node;
 
 import java.awt.Color;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -140,7 +142,9 @@ public final class BasicsTypes {
         @Override public LocalDate fresh() { return LocalDate.of(2000, 1, 1); }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.date(ctx); }
 
-        @Override public String factory() { return "of"; }
+        @Override public Executable factory() {
+            return method(LocalDate.class, "of", int.class, int.class, int.class);
+        }
         @Override public List<Class<?>> componentTypes() {
             return List.of(int.class, int.class, int.class);
         }
@@ -168,7 +172,9 @@ public final class BasicsTypes {
         @Override public LocalTime fresh() { return LocalTime.MIDNIGHT; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.time(ctx); }
 
-        @Override public String factory() { return "of"; }
+        @Override public Executable factory() {
+            return method(LocalTime.class, "of", int.class, int.class, int.class);
+        }
         @Override public List<Class<?>> componentTypes() {
             return List.of(int.class, int.class, int.class);
         }
@@ -198,10 +204,22 @@ public final class BasicsTypes {
         @Override public Duration fresh() { return Duration.ZERO; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.duration(ctx); }
 
-        @Override public String factory() { return "ofMillis"; }
+        @Override public Executable factory() { return method(Duration.class, "ofMillis", long.class); }
         @Override public List<Class<?>> componentTypes() { return List.of(long.class); }
         @Override public List<Object> components(Duration d) { return List.of(d.toMillis()); }
         @Override public Duration build(List<Object> parts) { return Duration.ofMillis(count(parts, 0)); }
+    }
+
+    /**
+     * {@code owner.name(parameters)}. A JDK method that is gone fails here, in this plugin's own tests,
+     * rather than in a bot's file.
+     */
+    private static Method method(Class<?> owner, String name, Class<?>... parameters) {
+        try {
+            return owner.getMethod(name, parameters);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(owner.getName() + "." + name + " is gone", e);
+        }
     }
 
     /**
