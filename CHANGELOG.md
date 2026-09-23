@@ -7,6 +7,90 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.0.8; re-released for updated upstream pins.
+
+### Added
+
+- **`values/BasicsTypes`** — the nine, one class each, every method abstract: the class it is, a `fresh()`
+  that returns a real value rather than a Java expression as text, and the editor. `Color`, `LocalDate`,
+  `LocalTime` and `Duration` also implement `ComponentType`, which is what the host writes
+  `java.time.Duration.ofMillis(3000L)` and `new java.awt.Color(255, 0, 0)` from — the *components*, never a
+  `decode(…)` or a `parse(…)` that can throw at class initialisation.
+- **`values/BasicsEditors`** — the widgets for those nine, lifted out of Studio's own `ValueEditors`, which
+  drew them off a value-type id. A `switch` on `"DATE"` in the host is the host holding one plugin's
+  vocabulary; basics declares the type, so basics draws it. Nothing here is generic and nothing here is
+  meant to be: the reusable shapes stay in `botmaker-plugin-toolkit`.
+
+### Changed
+
+- **`LocalDate.of`, `LocalTime.of` and `Duration.ofMillis` are declared as the `Method`s they are**, the
+  contract's `ComponentType.factory()` being an `Executable` now; a date, a time and a duration are written
+  exactly as before.
+
+### Removed
+
+- **`values/JdkText` and `values/BasicsValueTypes`**, the two halves of the stored-text reader. Nothing
+  stores text: a user parameter is a `@Param` field (2026-09-17) and a plugin's values are `@Managed`
+  methods (2026-09-21), so `parse` and `store` had no caller. The writing half that *was* still wired was
+  wrong — a leaf round-tripped Java through wire text through `literal(parse(java))`, and a
+  `java.awt.Color` parameter opened and closed with no edit came back rewritten.
+- **`params/Param` and `managed/Managed`**, moved to `com.botmaker.plugin.api.params` and
+  `…api.managed`. They were held here because this module declares the contract `provided` and a bot
+  therefore had no contract jar, and both annotations land on a bot's *own* declarations. The SDK brings
+  the contract at `compile` now. `ManagedValues` — bot-side, and the thing that reads `@Managed` at run
+  time — reflects against the contract's copy, and `BasicsIsBotSafeTest` names those two packages as the
+  ones that legitimately travel to a bot.
+- **The persisted value-type ids** (`TEXT`, `YES_NO`, `DURATION`, …) with `ValueType`. The identity is the
+  Java class a field is declared as, and has been since a parameter became a `@Param` field; the ids were
+  the last thing still reading the enum vocabulary and nothing wrote one.
+- **`store/ProjectStore` and `store/PluginStore`, folded into `PluginData`.** They were two layers under
+  one file name, built for a store with several customers, and they ended with one and a half:
+  `FlowLayout`'s card positions and `Settings.forPlugin`. Everything else they held now lives in the bot's
+  own Java — a parameter is a `@Param` field, a plugin's value is a `@Managed` method, the flow is a `Flow`,
+  and the capture source went the same way in this release.
+  `PluginData` gains `load(pluginId, name)` (the document off a bot's classpath) and `convert(node, type)`
+  (a document as a record); `read(name)` now answers the `JsonNode` directly rather than a wrapper, and
+  `write` does its own I/O. **Every failure answer is unchanged** — absent, unreadable, unparseable and
+  shape-wrong all read as empty, an unparseable file says so once on `System.err`, and writing throws. They
+  were kept verbatim rather than re-decided, so a plugin sees no difference. `Settings` is untouched in
+  shape and is still the only bot-side reader.
+
+### Added
+
+- **`managed/ManagedValues`** — hands a bot's `@Managed` values to the plugins that own them, so no bot
+  writes an `install()`. `claim(id, sink)` is a plugin's library half saying it takes an id; `install(Class…)`
+  invokes every `public static` no-argument `@Managed` method on each class named and dispatches what it
+  returns. It sits beside `@Managed` because that is where the annotation lives and both are on every bot's
+  classpath.
+  An unclaimed id, a method that throws and a values class that cannot be read are each one line on
+  `System.err` and never a throw — the first is the ordinary state of a bot whose pom no longer names that
+  plugin. `@Managed` on a *type* installs nothing: it marks constants the bot names at its use sites.
+  **Claim ordering needs no registry file**: `install` invokes a method before dispatching its value, and
+  invoking links the declared return type, so a plugin claiming from that type's static initialiser is
+  always registered in time.
+
+### Removed
+
+- **`store/ParameterStore` (582 lines) and `store/StoredForms`**, with `PluginData.PARAMETERS`. A plugin was
+  to declare its rows through `ParameterStore.declare` and the host was to read them back through the
+  contract. **`declare` had no caller anywhere** — not in this module, not in the SDK, not in Studio — so the
+  only rows the store ever returned were whatever sat in a project written before 2026-09-17, and the file it
+  kept them in was never written again. A second reader of a format nothing writes is what the umbrella
+  `CLAUDE.md` forbids by name; it is the same failure shape as `ValueCodec.wireOfLiteral`, and here the half
+  nobody wrote was the writing half.
+  A parameter is a `@Param` static field in the bot's own Java, read and written off the syntax tree.
+  **A plugin that wants a row of its own puts a `@Param` field in the file it ships** — the host's walk of
+  the bot's sources finds it with no store, no file format and no contract surface.
+  `Settings` and `ValueGrammar` are untouched: a plugin's own flags are not rows, and a running bot still
+  reads them.
+
+### Changed
+
+- **Recompiled against the contract's new packages** — imports only, no behaviour change. See
+  `botmaker-studio-api`'s changelog for the old → new table.
+
 ## [0.0.8] — 2026-09-23
 
 ### Added
