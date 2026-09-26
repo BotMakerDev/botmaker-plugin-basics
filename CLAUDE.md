@@ -199,8 +199,10 @@ The rule (the maintainer's, 2026-09-27): **basics draws the JDK types, the SDK o
 one exception: it is declared here and drawn plainly here, and the SDK offers an eyedropper through
 `slotEditors()` that samples a frozen frame of the **capture target** — screen capture this plugin does not
 have. The host asks the user which editor to use. The SDK's `Duration` override was deleted on 2026-09-27;
-`DurationPicker` here (presets, spinners that carry, the length in words) is the only one. Its rules live in
-the bot-safe `DurationParts`/`DurationText`, tested without a screen.
+`DurationPicker` here (presets, spinners that carry, the length in words) is the only one, and `TimeDial`
+(a 24h two-ring clock) draws `LocalTime`. Their rules live in the bot-safe `DurationParts`/`DurationText` and
+`ClockDial`/`TimeText`, tested without a screen; both views write only through `BasicsEditors.commit` (what
+was picked, and only when it differs from what was read).
 
 ## Building and releasing
 

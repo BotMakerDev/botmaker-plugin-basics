@@ -172,6 +172,7 @@ public final class BasicsTypes {
         public TimeType() { super(LocalTime.class); }
         @Override public LocalTime fresh() { return LocalTime.MIDNIGHT; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.time(ctx); }
+        @Override public Node preview(ValueContext ctx) { return new Label(BasicsEditors.timeLabel(ctx)); }
 
         @Override public Executable factory() {
             return method(LocalTime.class, "of", int.class, int.class, int.class);

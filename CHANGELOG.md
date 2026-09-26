@@ -11,6 +11,12 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **A time of day is picked on a clock.** A `LocalTime` slot is a pill (`07:30`, `07:30:15` when the seconds
+  are not zero) opening a 24h clock dial — outer ring 1–12, inner 13–00, then the minutes — with a seconds
+  box, quick times (`00:00`, `06:00`, `12:00`, `18:00`), Now (written as a fixed time, never
+  `LocalTime.now()`) and the time in words (`= 7:30 in the morning`). It replaces the three inline boxes, so
+  the block gets narrower. The same write rule as Duration below; a time with nanoseconds keeps them unless
+  something is picked.
 - **Duration is picked, not typed.** A Duration slot is a pill (`1m30s`) that opens preset chips
   (`100ms` … `1h`), one spinner per unit that carries into the next (`59s` ▴ is `1m0s`, never below zero) and
   the length in words (`= 1 minute 30 seconds`). OK writes only what was picked and only when it changed, so

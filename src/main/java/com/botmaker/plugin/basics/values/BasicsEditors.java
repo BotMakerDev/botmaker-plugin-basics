@@ -13,7 +13,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 
 import java.awt.Color;
 import java.time.Duration;
@@ -146,28 +145,30 @@ public final class BasicsEditors {
     }
 
     /**
-     * A time of day, as three boxes.
+     * A time of day: a pill ({@code 07:30}) that opens a 24h clock dial ({@link TimeDial}). OK writes through
+     * {@link #commit}; a slot the host could not read opens on midnight, and a value with nanoseconds opens
+     * truncated to the second without writing the truncation back unless something is picked.
      *
-     * <p>Three rather than a text field, for the reason {@link Fields#duration} gives about four: a person
-     * typing {@code 07:30} into a free field has to be told the format, and every format anybody types is
-     * one somebody else's locale spells differently.
+     * <p>A dial rather than a text field: a person typing {@code 07:30} into a free field has to be told the
+     * format, and every format anybody types is one somebody else's locale spells differently.
      */
     public static Node time(ValueContext ctx) {
-        LocalTime held = ctx.value(LocalTime.class).orElse(LocalTime.MIDNIGHT);
-        TextField hours = unit(held.getHour(), "h");
-        TextField minutes = unit(held.getMinute(), "m");
-        TextField seconds = unit(held.getSecond(), "s");
-
-        Runnable report = () -> ctx.set(LocalTime.of(
-                Math.clamp(whole(hours), 0, 23), Math.clamp(whole(minutes), 0, 59),
-                Math.clamp(whole(seconds), 0, 59)));
-        for (TextField box : new TextField[] {hours, minutes, seconds}) {
-            box.focusedProperty().addListener((obs, was, focused) -> {
-                if (!focused) report.run();
+        Button[] pill = new Button[1];
+        pill[0] = Pills.button(timeLabel(ctx), () -> {
+            LocalTime before = ctx.value(LocalTime.class).orElse(null);
+            TimeDial dial = new TimeDial(before == null ? LocalTime.MIDNIGHT : before.withNano(0));
+            Modals.form(ctx, "Time of day", dial.node(), () -> {
+                LocalTime after = dial.time();
+                if (commit(ctx, before, after, dial.touched())) pill[0].setText(TimeText.pill(after));
             });
-            box.setOnAction(e -> report.run());
-        }
-        return new HBox(6, hours, minutes, seconds);
+        });
+        return pill[0];
+    }
+
+    /** What a time pill says: {@code 07:30}, the source as written, or {@code Time…} when empty. */
+    static String timeLabel(ValueContext ctx) {
+        return ctx.value(LocalTime.class).map(TimeText::pill)
+                .orElseGet(() -> Slots.isEmpty(ctx) ? "Time…" : Slots.raw(ctx));
     }
 
     /**
@@ -211,22 +212,6 @@ public final class BasicsEditors {
         if (!touched || after == null || after.equals(before)) return false;
         ctx.set(after);
         return true;
-    }
-
-    private static TextField unit(int value, String suffix) {
-        TextField field = Styles.on(new TextField(Integer.toString(value)), Styles.INSET_FIELD);
-        field.setPromptText(suffix);
-        field.setPrefColumnCount(3);
-        return field;
-    }
-
-    /** What a box says as a whole number, floored at zero — a half-typed number is a normal state. */
-    private static int whole(TextField field) {
-        try {
-            return Math.max(0, Integer.parseInt(field.getText() == null ? "" : field.getText().trim()));
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     /** A whole number reads as one — {@code 3}, not {@code 3.0}. */
