@@ -193,13 +193,14 @@ not owning it: the SDK does exactly that for `Duration` and `Color` (see below),
 which to use. **A type no loaded plugin declares is not an error either**: the value keeps the expression
 its author wrote, renders read-only and is never rewritten.
 
-## The SDK overrides two of these, and it is the one thing named twice
+## The SDK overrides one of these, and it is the one thing named twice
 
-`Duration` and `Color` are declared here and drawn plainly here; the SDK offers better editors through
-`slotEditors()`. Neither could move: the SDK's colour picker samples a frozen frame of the **capture
-target**, whose list lives in the SDK's own `capture.json` and *no code reads another plugin's file*, and
-its duration editor rewrites `Wait.time(x)` into `Wait.between(min, max)`, which names an SDK type. What is
-here is what a project with no SDK installed still gets.
+The rule (the maintainer's, 2026-09-27): **basics draws the JDK types, the SDK only its own.** `Color` is the
+one exception: it is declared here and drawn plainly here, and the SDK offers an eyedropper through
+`slotEditors()` that samples a frozen frame of the **capture target** — screen capture this plugin does not
+have. The host asks the user which editor to use. The SDK's `Duration` override was deleted on 2026-09-27;
+`DurationPicker` here (presets, spinners that carry, the length in words) is the only one. Its rules live in
+the bot-safe `DurationParts`/`DurationText`, tested without a screen.
 
 ## Building and releasing
 

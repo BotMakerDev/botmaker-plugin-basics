@@ -7,6 +7,16 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+### Changed
+
+- **Duration is picked, not typed.** A Duration slot is a pill (`1m30s`) that opens preset chips
+  (`100ms` … `1h`), one spinner per unit that carries into the next (`59s` ▴ is `1m0s`, never below zero) and
+  the length in words (`= 1 minute 30 seconds`). OK writes only what was picked and only when it changed, so
+  opening it and pressing OK leaves the file as it was. It is the only Duration editor now: the SDK's copy is
+  deleted. A Choices row shows the same pill text.
+
 ## [0.0.10] — 2026-09-27
 
 No source changes since v0.0.9; re-released for updated upstream pins.
