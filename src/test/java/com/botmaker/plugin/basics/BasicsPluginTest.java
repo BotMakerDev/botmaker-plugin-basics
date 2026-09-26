@@ -2,6 +2,7 @@ package com.botmaker.plugin.basics;
 
 import com.botmaker.plugin.api.StudioPlugin;
 import com.botmaker.plugin.api.value.ComponentType;
+import com.botmaker.plugin.api.value.EditableType;
 import com.botmaker.plugin.api.value.PluginType;
 import com.botmaker.plugin.basics.values.BasicsTypes;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BasicsPluginTest {
 
     private final BasicsPlugin plugin = new BasicsPlugin();
+
+    /** Basics draws every type it declares (6f): each is an EditableType, so `validate` needs no probe. */
+    @Test
+    void every_basics_type_is_editable() {
+        for (PluginType<?> type : plugin.types()) {
+            assertTrue(type instanceof EditableType<?>, () -> type.type().getName() + " is not editable");
+        }
+    }
 
     @Test
     void the_service_declaration_names_this_class() {

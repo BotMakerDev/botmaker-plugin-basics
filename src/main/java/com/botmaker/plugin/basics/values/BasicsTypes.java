@@ -2,6 +2,7 @@ package com.botmaker.plugin.basics.values;
 
 import com.botmaker.plugin.api.slot.ValueContext;
 import com.botmaker.plugin.api.value.ComponentType;
+import com.botmaker.plugin.api.value.EditableType;
 import com.botmaker.plugin.api.value.PluginType;
 import com.botmaker.plugin.toolkit.AbstractPluginType;
 import javafx.scene.Node;
@@ -68,28 +69,28 @@ public final class BasicsTypes {
     }
 
     /** Text. A bot's most common field, and the one the host writes as a plain literal. */
-    public static final class TextType extends AbstractPluginType<String> {
+    public static final class TextType extends AbstractPluginType<String> implements EditableType<String> {
         public TextType() { super(String.class); }
         @Override public String fresh() { return ""; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.text(ctx); }
     }
 
     /** A tick box. {@code false} is the fresh value, which is the state that does nothing. */
-    public static final class FlagType extends AbstractPluginType<Boolean> {
+    public static final class FlagType extends AbstractPluginType<Boolean> implements EditableType<Boolean> {
         public FlagType() { super(boolean.class); }
         @Override public Boolean fresh() { return false; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.flag(ctx); }
     }
 
     /** A whole number. */
-    public static final class WholeType extends AbstractPluginType<Integer> {
+    public static final class WholeType extends AbstractPluginType<Integer> implements EditableType<Integer> {
         public WholeType() { super(int.class); }
         @Override public Integer fresh() { return 0; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.whole(ctx); }
     }
 
     /** A decimal number. */
-    public static final class DecimalType extends AbstractPluginType<Double> {
+    public static final class DecimalType extends AbstractPluginType<Double> implements EditableType<Double> {
         public DecimalType() { super(double.class); }
         @Override public Double fresh() { return 0.0; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.decimal(ctx); }
@@ -102,7 +103,8 @@ public final class BasicsTypes {
      * type and would not recognise in their own file. It is the default the old reader answered for
      * unreadable text, carried over unchanged.
      */
-    public static final class CharacterType extends AbstractPluginType<Character> {
+    public static final class CharacterType extends AbstractPluginType<Character>
+            implements EditableType<Character> {
         public CharacterType() { super(char.class); }
         @Override public Character fresh() { return 'a'; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.character(ctx); }
@@ -115,7 +117,8 @@ public final class BasicsTypes {
      * is the fresh value — visible on every background, and what the old reader answered for unreadable
      * text.
      */
-    public static final class ColorType extends AbstractPluginType<Color> implements ComponentType<Color> {
+    public static final class ColorType extends AbstractPluginType<Color>
+            implements EditableType<Color>, ComponentType<Color> {
         public ColorType() { super(Color.class); }
         @Override public Color fresh() { return Color.WHITE; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.color(ctx); }
@@ -138,7 +141,7 @@ public final class BasicsTypes {
 
     /** A date. {@code LocalDate.of(2000, 1, 1)} is the fresh one, as the old reader's fallback was. */
     public static final class DateType extends AbstractPluginType<LocalDate>
-            implements ComponentType<LocalDate> {
+            implements EditableType<LocalDate>, ComponentType<LocalDate> {
         public DateType() { super(LocalDate.class); }
         @Override public LocalDate fresh() { return LocalDate.of(2000, 1, 1); }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.date(ctx); }
@@ -168,7 +171,7 @@ public final class BasicsTypes {
      * the minute the first time the window opens.
      */
     public static final class TimeType extends AbstractPluginType<LocalTime>
-            implements ComponentType<LocalTime> {
+            implements EditableType<LocalTime>, ComponentType<LocalTime> {
         public TimeType() { super(LocalTime.class); }
         @Override public LocalTime fresh() { return LocalTime.MIDNIGHT; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.time(ctx); }
@@ -201,7 +204,7 @@ public final class BasicsTypes {
      * the host did not write gets.
      */
     public static final class DurationType extends AbstractPluginType<Duration>
-            implements ComponentType<Duration> {
+            implements EditableType<Duration>, ComponentType<Duration> {
         public DurationType() { super(Duration.class); }
         @Override public Duration fresh() { return Duration.ZERO; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.duration(ctx); }

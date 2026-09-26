@@ -11,6 +11,7 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **All nine types implement `EditableType`** (contract 0.3.0): basics draws every type it declares.
 - **A time of day is picked on a clock.** A `LocalTime` slot is a pill (`07:30`, `07:30:15` when the seconds
   are not zero) opening a 24h clock dial — outer ring 1–12, inner 13–00, then the minutes — with a seconds
   box, quick times (`00:00`, `06:00`, `12:00`, `18:00`), Now (written as a fixed time, never
