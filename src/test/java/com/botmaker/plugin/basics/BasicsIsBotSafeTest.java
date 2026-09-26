@@ -44,7 +44,8 @@ class BasicsIsBotSafeTest {
      * <p>{@code BasicsPlugin} <em>is</em> the contract implementation; {@code BasicsTypes} declares the nine
      * and {@code BasicsEditors} draws them, which is everything only a host asks for. All three are in the
      * same jar as the bot-safe half, exactly as {@code SdkPlugin} sits in the SDK's jar: what matters is
-     * that nothing a bot links reaches them.
+     * that nothing a bot links reaches them. {@code DurationPicker} (2026-09-27) is the Duration popup's
+     * JavaFX body; its rules are the bot-safe {@code DurationParts}.
      *
      * <p>{@code ParameterStore} and {@code StoredForms} were exempted here too, from 2026-09-10 and
      * 2026-09-20; {@code JdkText} and {@code BasicsValueTypes} were the bot-safe and editor-side halves of
@@ -52,7 +53,7 @@ class BasicsIsBotSafeTest {
      * Java and a value is the Java that writes it, so nothing stores text and nothing reads any back.
      */
     private static final Set<String> EDITOR_ONLY =
-            Set.of("BasicsPlugin.java", "BasicsTypes.java", "BasicsEditors.java");
+            Set.of("BasicsPlugin.java", "BasicsTypes.java", "BasicsEditors.java", "DurationPicker.java");
 
     /** What a bot's classpath does not have. Javadoc mentions are fine; a source reference is not. */
     private static final List<String> BANNED = List.of("com.botmaker.plugin.api", "javafx.");

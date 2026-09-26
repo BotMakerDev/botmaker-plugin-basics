@@ -5,6 +5,7 @@ import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.PluginType;
 import com.botmaker.plugin.toolkit.AbstractPluginType;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 
 import java.awt.Color;
 import java.lang.reflect.Executable;
@@ -203,6 +204,9 @@ public final class BasicsTypes {
         public DurationType() { super(Duration.class); }
         @Override public Duration fresh() { return Duration.ZERO; }
         @Override public Node editor(ValueContext ctx) { return BasicsEditors.duration(ctx); }
+        @Override public Node preview(ValueContext ctx) {
+            return new Label(BasicsEditors.durationLabel(ctx, ctx.value(Duration.class).orElse(null)));
+        }
 
         @Override public Executable factory() { return method(Duration.class, "ofMillis", long.class); }
         @Override public List<Class<?>> componentTypes() { return List.of(long.class); }

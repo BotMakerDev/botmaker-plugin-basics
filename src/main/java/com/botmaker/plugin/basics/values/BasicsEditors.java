@@ -3,14 +3,15 @@ package com.botmaker.plugin.basics.values;
 import com.botmaker.plugin.api.slot.ValueContext;
 import com.botmaker.plugin.toolkit.Editors;
 import com.botmaker.plugin.toolkit.Fields;
+import com.botmaker.plugin.toolkit.Modals;
 import com.botmaker.plugin.toolkit.Pills;
 import com.botmaker.plugin.toolkit.Slots;
 import com.botmaker.plugin.toolkit.Styles;
 import com.botmaker.plugin.toolkit.Values;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.DatePicker;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 
@@ -34,13 +35,12 @@ import java.time.LocalTime;
  * That was the host holding one plugin's vocabulary: a switch on {@code "DATE"} in the editor is the thing
  * an open type system exists to remove. Basics declares the type, so basics draws it.
  *
- * <h2>Two of them are deliberately plain</h2>
+ * <h2>The JDK types are drawn here, and nowhere else but Color</h2>
  *
- * <p>{@link #color} and {@link #duration} are a colour swatch and four number boxes, and the SDK overrides
- * both through {@code slotEditors()} with something better — a picker that samples the capture target, and
- * one that can turn {@code Wait.time(x)} into {@code Wait.between(min, max)}. Neither of those could live
- * here: the first reads the SDK's own capture file and <em>no code reads another plugin's file</em>, and
- * the second names an SDK type. What is here is what a project with no SDK installed still gets.
+ * <p>Basics owns the JDK types, so it draws them — the Duration picker and the time-of-day dial included
+ * (2026-09-27; the SDK's own Duration editor was a near copy and is deleted). {@link #color} stays a plain
+ * swatch: the SDK offers an eyedropper over the capture target through {@code slotEditors()}, which needs
+ * screen capture this plugin does not have, and the host asks the user which editor to use.
  *
  * <h2>Reading a box is not parsing Java</h2>
  *
@@ -171,57 +171,46 @@ public final class BasicsEditors {
     }
 
     /**
-     * A length of time, as hours, minutes, seconds and milliseconds.
-     *
-     * <p>The plain one, behind a pill so a value on a block reads {@code 1m30s} rather than taking four
-     * boxes of width. The SDK's is offered instead wherever the SDK is installed, because it can also turn
-     * a fixed wait into a random one — which is a change to the enclosing <em>call</em> and names an SDK
-     * type.
+     * A length of time: a pill ({@code 1m30s}) that opens preset chips, one spinner per unit and the length in
+     * words ({@link DurationPicker}). OK writes through {@link #commit}; a slot the host could not read opens on
+     * one second.
      */
     public static Node duration(ValueContext ctx) {
-        Duration held = ctx.value(Duration.class).orElse(null);
-        MenuButton pill = Pills.bare(durationLabel(ctx, held));
-        Pills.onOpen(pill, () -> java.util.List.of(Pills.item("Set duration…", () -> {
-            long[] picked = {held == null ? 0 : held.toMillis()};
-            HBox boxes = Fields.duration(picked[0], millis -> picked[0] = millis);
-            com.botmaker.plugin.toolkit.Modals.form(ctx, "Duration", boxes, () -> {
-                Duration chosen = Duration.ofMillis(picked[0]);
-                ctx.set(chosen);
-                pill.setText(durationLabel(ctx, chosen));
+        Button[] pill = new Button[1];
+        pill[0] = Pills.button(durationLabel(ctx, ctx.value(Duration.class).orElse(null)), () -> {
+            Duration before = ctx.value(Duration.class).orElse(null);
+            DurationPicker picker = new DurationPicker(before == null ? 1_000L : before.toMillis());
+            Modals.form(ctx, "Duration", picker.node(), () -> {
+                Duration after = Duration.ofMillis(picker.millis());
+                if (commit(ctx, before, after, picker.touched())) pill[0].setText(durationLabel(ctx, after));
             });
-        })));
-        return pill;
+        });
+        return pill[0];
     }
 
     /**
      * What a duration pill says: {@code 1m30s}, or the expression as written when the grammar could not
-     * read it.
+     * read it, or {@code Duration…} when the slot is empty.
      *
-     * <p>Public because it is the one piece of these editors assertable with no JavaFX toolkit. The
-     * spelling itself came from {@code JdkText.spellDuration}, which was deleted with the rest of the
-     * stored-text reader — a bot has no use for it, and this is the only thing that ever read it back.
+     * <p>Public because it is the one piece of these editors assertable with no JavaFX toolkit; the spelling
+     * is {@link DurationText#spell}.
      */
     public static String durationLabel(ValueContext ctx, Duration value) {
-        if (value != null) return spell(value.toMillis());
+        if (value != null) return DurationText.spell(value.toMillis());
         return Slots.isEmpty(ctx) ? "Duration…" : Slots.raw(ctx);
     }
 
-    /** {@code 0s}, {@code 250ms}, {@code 1m30s}, {@code 1h30m} — the largest units first, zeroes dropped. */
-    private static String spell(long millis) {
-        if (millis <= 0) return "0s";
-        StringBuilder out = new StringBuilder();
-        long left = millis;
-        left = unit(out, left, 3_600_000L, "h");
-        left = unit(out, left, 60_000L, "m");
-        left = unit(out, left, 1000L, "s");
-        if (left > 0) out.append(left).append("ms");
-        return out.toString();
-    }
-
-    private static long unit(StringBuilder out, long left, long size, String suffix) {
-        long count = left / size;
-        if (count > 0) out.append(count).append(suffix);
-        return left - count * size;
+    /**
+     * The one write rule both time pickers share: only what the person picked, and only when it differs from
+     * what was read. So opening a picker and pressing OK leaves the file byte-identical, and a source the host
+     * could not read ({@code before == null}) is replaced only once something was chosen.
+     *
+     * @return whether it wrote
+     */
+    static <T> boolean commit(ValueContext ctx, T before, T after, boolean touched) {
+        if (!touched || after == null || after.equals(before)) return false;
+        ctx.set(after);
+        return true;
     }
 
     private static TextField unit(int value, String suffix) {
