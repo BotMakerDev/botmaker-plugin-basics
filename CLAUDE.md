@@ -7,7 +7,13 @@ repositories fit together; this file is what is true *here*.
 
 **Plugin #2**, and the first plugin in the project that is not the SDK. Its id is `com.botmaker.basics`.
 
-It owns three things, all three landed on 2026-09-09.
+> **Since 2026-09-28 it owns the JDK value types and their editors, and nothing else.** `store.PluginData`,
+> `store.Settings` (items 2, 3 and 6 below) had no caller left and are deleted with Jackson;
+> `managed.ManagedValues` (item 5) is the contract's `com.botmaker.plugin.api.managed.ManagedValues`, typed by
+> a plugin's `ManagedValue<T>`. Nothing here runs in a bot, so `BasicsIsBotSafeTest` is deleted and the third
+> rule below is history. Read the numbered items as how the module got here.
+
+It owned three things, all three landed on 2026-09-09.
 
 1. **The JDK value types** — `String`, `boolean`, `int`, `double`, `char`, `java.awt.Color`,
    `LocalDate`, `LocalTime`, `Duration`, since 2026-09-27 (picker 6e3) the enums `DayOfWeek` and `Month`,

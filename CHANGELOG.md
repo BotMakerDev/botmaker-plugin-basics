@@ -49,6 +49,14 @@ heading in that module's own release commit.
   opening it and pressing OK leaves the file as it was. It is the only Duration editor now: the SDK's copy is
   deleted. A Choices row shows the same pill text.
 
+### Removed
+
+- **`managed.ManagedValues`** — the `@Managed` runtime is the contract's (`com.botmaker.plugin.api.managed`),
+  typed by the plugin's `ManagedValue<T>`.
+- **`store.PluginData` and `store.Settings`**, with the Jackson dependency they needed. Nothing called them:
+  a plugin's values are Java in the bot. `BasicsPlugin.ID` is its own constant. Nothing here runs in a bot any
+  more, so `BasicsIsBotSafeTest` is gone too.
+
 ## [0.0.10] — 2026-09-27
 
 No source changes since v0.0.9; re-released for updated upstream pins.

@@ -1,7 +1,6 @@
 package com.botmaker.plugin.basics;
 
 import com.botmaker.plugin.api.value.PluginType;
-import com.botmaker.plugin.basics.store.PluginData;
 import com.botmaker.plugin.basics.values.BasicsTypes;
 import com.botmaker.plugin.toolkit.AbstractStudioPlugin;
 
@@ -16,23 +15,13 @@ import java.util.List;
  * were the SDK's only because the SDK was written first; the SDK keeps the eight that really are its own,
  * and the host reads both lists the same way.
  *
- * <p><b>It owns the store too</b>, since the same day: {@code com.botmaker.plugin.basics.store} — the
- * {@link PluginData} tree a project's plugins keep their files in, the
- * {@code Settings}/{@code ValueGrammar} pair a <em>running bot</em> reads its own settings through. They
- * arrived from {@code com.botmaker.plugin.toolkit.config}, where they had spent a day; a widget kit owns no
- * value types, so it could hold the mechanism only by promising never to use it.
+ * <p><b>That is all it owns, since 2026-09-28.</b> It held a store ({@code PluginData}, {@code Settings}) and
+ * the bot-side {@code @Managed} runtime ({@code ManagedValues}) too. The store had no caller left — a plugin's
+ * values are Java in the bot — and the runtime is the contract's, beside {@code @Managed}. So nothing here runs
+ * in a bot, and the Jackson dependency the store needed is gone.
  *
- * <p><b>A third class stood beside them from 2026-09-10 to 2026-09-22 and is deleted</b>:
- * {@code ParameterStore}, which <em>any</em> plugin was to declare parameters through. Nothing ever called
- * its {@code declare}, so what the host read back was a pre-2026-09-17 project's JSON and nothing else. A
- * parameter is a {@code @Param} field in the bot's own Java now — including a plugin's own, in the file the
- * plugin ships — so there is no rows file and no store for one.
- *
- * <p>What is left for a later phase is moving the SDK plugin's own activities, flow and presets into files
- * of their own in that tree.
- *
- * <p><b>The id is the identity and it never changes.</b> {@code com.botmaker.basics} is what a project's
- * stored data refers to and what the plugin registry refuses to admit twice; the Maven coordinate may move
+ * <p><b>The id is the identity and it never changes.</b> {@code com.botmaker.basics} is what the plugin
+ * registry refuses to admit twice; the Maven coordinate may move
  * under it. A project opened without this plugin installed keeps every value of a type declared here as raw
  * text, renders it read-only and never rewrites it — which is what makes an open vocabulary safe.
  *
@@ -43,14 +32,8 @@ import java.util.List;
  */
 public final class BasicsPlugin extends AbstractStudioPlugin {
 
-    /**
-     * The registered plugin id. Stored in projects; never change it.
-     *
-     * <p>Defined in the bot half, because a running bot needs the same string to find this plugin's own
-     * folder and cannot load this class — it names the contract, which is {@code provided} and so absent
-     * from a bot's classpath.
-     */
-    public static final String ID = PluginData.BASICS_ID;
+    /** The registered plugin id; never change it. */
+    public static final String ID = "com.botmaker.basics";
 
     /** What Studio shows in Manage Plugins. */
     public static final String NAME = "BotMaker Basics";
