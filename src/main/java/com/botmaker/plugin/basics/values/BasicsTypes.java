@@ -11,14 +11,16 @@ import javafx.scene.control.Label;
 import java.awt.Color;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Month;
 import java.util.List;
 
 /**
- * The nine types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
- * day and a duration.
+ * The eleven types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
+ * day, a duration, and (since picker 6e3) a day of the week and a month.
  *
  * <h2>These were the SDK's, and moving them is the point</h2>
  *
@@ -219,6 +221,31 @@ public final class BasicsTypes {
     }
 
     /**
+     * A day of the week — {@code DayOfWeek.MONDAY}, a constant the host reads and writes as the enum it is.
+     * Declared since picker 6e3 so basics draws it (a row of seven days) rather than the host's generic enum
+     * dropdown: a JDK type is basics' to draw.
+     */
+    public static final class DayOfWeekType extends AbstractPluginType<DayOfWeek>
+            implements EditableType<DayOfWeek> {
+        public DayOfWeekType() { super(DayOfWeek.class); }
+        @Override public DayOfWeek fresh() { return DayOfWeek.MONDAY; }
+        @Override public Node editor(ValueContext ctx) { return BasicsEditors.dayOfWeek(ctx); }
+        @Override public Node preview(ValueContext ctx) {
+            return new Label(ctx.value(DayOfWeek.class).map(PickRules::shortName).orElse(""));
+        }
+    }
+
+    /** A month — {@code Month.MARCH}, drawn as a pill opening the twelve (picker 6e3). */
+    public static final class MonthType extends AbstractPluginType<Month> implements EditableType<Month> {
+        public MonthType() { super(Month.class); }
+        @Override public Month fresh() { return Month.JANUARY; }
+        @Override public Node editor(ValueContext ctx) { return BasicsEditors.month(ctx); }
+        @Override public Node preview(ValueContext ctx) {
+            return new Label(ctx.value(Month.class).map(PickRules::longName).orElse(""));
+        }
+    }
+
+    /**
      * {@code owner.name(parameters)}. A JDK method that is gone fails here, in this plugin's own tests,
      * rather than in a bot's file.
      */
@@ -231,10 +258,11 @@ public final class BasicsTypes {
     }
 
     /**
-     * The nine, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
-     * with, then the three time types.
+     * The eleven, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
+     * with, then the five time types.
      */
     public static final List<PluginType<?>> ALL = List.of(
             new TextType(), new FlagType(), new WholeType(), new DecimalType(), new CharacterType(),
-            new ColorType(), new DateType(), new TimeType(), new DurationType());
+            new ColorType(), new DateType(), new TimeType(), new DurationType(), new DayOfWeekType(),
+            new MonthType());
 }

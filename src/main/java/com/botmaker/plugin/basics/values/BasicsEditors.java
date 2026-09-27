@@ -8,19 +8,32 @@ import com.botmaker.plugin.toolkit.Pills;
 import com.botmaker.plugin.toolkit.Slots;
 import com.botmaker.plugin.toolkit.Styles;
 import com.botmaker.plugin.toolkit.Values;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
 import java.awt.Color;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Month;
 
 /**
- * The widgets for {@link BasicsTypes}' nine.
+ * The widgets for {@link BasicsTypes}' eleven.
  *
  * <h2>This is not a second toolkit, and the rule that keeps it from becoming one</h2>
  *
@@ -56,20 +69,89 @@ public final class BasicsEditors {
     private BasicsEditors() {
     }
 
-    /** Text: a field that commits on Enter and on losing focus. */
+    /**
+     * Text: a field that commits on Enter and on losing focus, and ⤢, which opens it as a multi-line editor
+     * for text too long for a row (picker 6e3). OK writes; Cancel writes nothing.
+     */
     public static Node text(ValueContext ctx) {
-        return Editors.text(ctx, "text");
+        Node field = Editors.text(ctx, "text");
+        Button expand = Pills.icon("⤢", () -> {
+            TextArea area = new TextArea(Values.text(ctx, ""));
+            area.setWrapText(true);
+            area.setPrefRowCount(8);
+            area.setPrefColumnCount(40);
+            Modals.form(ctx, "Text", area, () -> ctx.set(area.getText()));
+        });
+        expand.setTooltip(new Tooltip("Edit as several lines"));
+        HBox row = new HBox(4, field, expand);
+        row.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(field, Priority.ALWAYS);
+        return row;
     }
 
     /**
-     * A tick box with no label of its own.
-     *
-     * <p>The toolkit's {@link Editors#flag} carries one because a bare box beside
-     * {@code enableDebug(true)} reads as though the box is the argument to something else. Here the row
-     * already says the field's name, so a second copy of it would read as two settings.
+     * An on/off switch saying its state in words (picker 6e3) — a bare tick box beside a row name reads as
+     * unset rather than off. No label of its own: the row already says the field's name.
      */
     public static Node flag(ValueContext ctx) {
-        return Editors.flag(ctx, "");
+        boolean held = Values.flag(ctx, false);
+        ToggleButton toggle = new ToggleButton(PickRules.flagLabel(held));
+        toggle.setSelected(held);
+        toggle.setMinWidth(52);
+        toggle.selectedProperty().addListener((o, was, is) -> {
+            toggle.setText(PickRules.flagLabel(is));
+            ctx.set(is);
+        });
+        return toggle;
+    }
+
+    /**
+     * A day of the week as a row of seven toggles, Monday first (picker 6e3). One is on at most; clicking the
+     * one that is on leaves it on, since a day is a value and "no day" is not one.
+     */
+    public static Node dayOfWeek(ValueContext ctx) {
+        DayOfWeek held = ctx.value(DayOfWeek.class).orElse(null);
+        ToggleGroup group = new ToggleGroup();
+        HBox row = new HBox(2);
+        row.setAlignment(Pos.CENTER_LEFT);
+        for (DayOfWeek day : DayOfWeek.values()) {
+            ToggleButton button = new ToggleButton(PickRules.shortName(day));
+            button.setToggleGroup(group);
+            button.setUserData(day);
+            button.setSelected(day == held);
+            button.setOnAction(e -> {
+                if (!button.isSelected()) {
+                    button.setSelected(true);
+                    return;
+                }
+                if (day != ctx.value(DayOfWeek.class).orElse(null)) ctx.set(day);
+            });
+            row.getChildren().add(button);
+        }
+        return row;
+    }
+
+    /** A month: a pill naming it that opens the twelve as a three-by-four grid (picker 6e3). */
+    public static Node month(ValueContext ctx) {
+        Month held = ctx.value(Month.class).orElse(null);
+        MenuButton pill = Pills.bare(held == null ? Values.labelOr(ctx.source(), "Month…") : PickRules.longName(held));
+        GridPane grid = new GridPane();
+        grid.setHgap(4);
+        grid.setVgap(4);
+        for (Month month : Month.values()) {
+            Button cell = new Button(PickRules.shortName(month));
+            cell.setMinWidth(48);
+            cell.setOnAction(e -> {
+                pill.hide();
+                pill.setText(PickRules.longName(month));
+                if (month != ctx.value(Month.class).orElse(null)) ctx.set(month);
+            });
+            int index = month.ordinal();
+            grid.add(cell, index % 4, index / 4);
+        }
+        CustomMenuItem item = new CustomMenuItem(grid, false);
+        pill.getItems().setAll(item);
+        return pill;
     }
 
     /** A whole number, typed. */
@@ -102,22 +184,61 @@ public final class BasicsEditors {
             }
         });
         field.setPrefColumnCount(whole ? 8 : 10);
-        return field;
+
+        // The stepper (picker 6e3): ▲/▼ and the scroll wheel move by one, or by the last decimal place shown;
+        // Shift is ×10. Each step writes, like typing a number and pressing Enter.
+        java.util.function.BiConsumer<Integer, Boolean> step = (direction, shift) -> {
+            double current;
+            try {
+                current = Double.parseDouble(field.getText().trim());
+            } catch (NumberFormatException notANumber) {
+                current = 0;
+            }
+            double next = PickRules.step(current, whole, field.getText(), direction, shift);
+            field.setText(whole ? Long.toString(Math.round(next)) : trim(next));
+            Values.setNumber(ctx, next);
+        };
+        // Shift is read as the button is pressed: an action event does not carry the modifier keys.
+        boolean[] shift = {false};
+        Button up = Pills.icon("▲", () -> step.accept(1, shift[0]));
+        Button down = Pills.icon("▼", () -> step.accept(-1, shift[0]));
+        up.setOnMousePressed(e -> shift[0] = e.isShiftDown());
+        down.setOnMousePressed(e -> shift[0] = e.isShiftDown());
+        up.setTooltip(new Tooltip("Up one (Shift: ten) — or scroll over the number"));
+        down.setTooltip(new Tooltip("Down one (Shift: ten) — or scroll over the number"));
+        field.setOnScroll(e -> {
+            if (e.getDeltaY() != 0) step.accept(e.getDeltaY() > 0 ? 1 : -1, e.isShiftDown());
+        });
+        HBox row = new HBox(2, field, new VBox(0, up, down));
+        row.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(field, Priority.ALWAYS);
+        return row;
     }
 
     /**
      * One character.
      *
      * <p>The field takes one and keeps the first of anything longer, which is what a paste of a whole word
-     * means: the author wanted its first letter, and refusing the paste outright says less.
+     * means: the author wanted its first letter, and refusing the paste outright says less. A character a
+     * person cannot see is shown by name — {@code space}, {@code tab} — and typing that name means it
+     * (picker 6e3); ⋯ offers the symbols a bot most often splits or joins text with.
      */
     public static Node character(ValueContext ctx) {
-        String held = ctx.value(Character.class).map(String::valueOf).orElse("");
-        TextField field = Fields.committing(held, "a", typed -> {
-            if (!typed.isEmpty()) ctx.set(typed.charAt(0));
-        });
-        field.setPrefColumnCount(2);
-        return field;
+        String held = ctx.value(Character.class).map(PickRules::charLabel).orElse("");
+        TextField field = Fields.committing(held, "a", typed ->
+                PickRules.charFrom(typed).ifPresent(ctx::set));
+        field.setPrefColumnCount(6);
+        MenuButton symbols = Pills.bare("⋯");
+        for (char c : new char[] {' ', '\t', '\n', ',', ';', ':', '|', '-', '_', '/', '\\', '.', '#', '@', '*'}) {
+            symbols.getItems().add(Pills.item(PickRules.charLabel(c), () -> {
+                field.setText(PickRules.charLabel(c));
+                ctx.set(c);
+            }));
+        }
+        symbols.setTooltip(new Tooltip("Common symbols"));
+        HBox row = new HBox(4, field, symbols);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
     }
 
     /**

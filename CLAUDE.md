@@ -9,13 +9,14 @@ repositories fit together; this file is what is true *here*.
 
 It owns three things, all three landed on 2026-09-09.
 
-1. **The nine JDK value types** — `String`, `boolean`, `int`, `double`, `char`, `java.awt.Color`,
-   `LocalDate`, `LocalTime`, `Duration`, in `com.botmaker.plugin.basics.values`. They are nobody's
+1. **The JDK value types** — `String`, `boolean`, `int`, `double`, `char`, `java.awt.Color`,
+   `LocalDate`, `LocalTime`, `Duration`, and since 2026-09-27 (picker 6e3) the enums `DayOfWeek` and `Month`,
+   in `com.botmaker.plugin.basics.values`; eleven. `PickRules` holds their pickers' pure rules. They are nobody's
    vocabulary in particular, and they were the SDK's only because the SDK was written first. The SDK keeps
    its own eight (`ImageTemplate`, `Precision`, `Point`, `Rect`, `Size`, `Direction`, `Key`,
    `MouseButton`), which genuinely are its.
 
-   **Two classes since 2026-09-22, and both are editor-side.** `BasicsTypes` holds nine `PluginType`
+   **Two classes since 2026-09-22, and both are editor-side.** `BasicsTypes` holds the `PluginType`
    declarations — the class, a `fresh()` that returns a real value, the editor — with a `ComponentType`
    beside the four whose Java is a call (`Color`, `LocalDate`, `LocalTime`, `Duration`). `BasicsEditors`
    draws them, out of the toolkit's generic shapes.
