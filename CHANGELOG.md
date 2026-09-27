@@ -16,6 +16,10 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **A number keeps to its declared range.** The stepper stops at `@Param(min, max)`, a typed value outside
+  is pulled to the nearest end (a whole number to the nearest whole one inside), and the empty field and its
+  tooltip say the range ("0 – 1", "at most 10").
+- **The on/off switch is red Off, green On**, as well as saying so.
 - **All eleven types implement `EditableType`** (contract 0.3.0): basics draws every type it declares.
 - **Numbers step.** ▲/▼ and the scroll wheel move a whole number by one and a decimal by its last written
   place (a tenth at least); Shift is ×10.

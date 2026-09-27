@@ -1,5 +1,6 @@
 package com.botmaker.plugin.basics.values;
 
+import com.botmaker.plugin.api.slot.Bounds;
 import com.botmaker.plugin.api.slot.ValueContext;
 import com.botmaker.plugin.toolkit.Editors;
 import com.botmaker.plugin.toolkit.Fields;
@@ -90,14 +91,16 @@ public final class BasicsEditors {
     }
 
     /**
-     * An on/off switch saying its state in words (picker 6e3) — a bare tick box beside a row name reads as
-     * unset rather than off. No label of its own: the row already says the field's name.
+     * An on/off switch saying its state in words (picker 6e3) and in colour, red Off and green On — a bare
+     * tick box beside a row name reads as unset rather than off. No label of its own: the row already says
+     * the field's name.
      */
     public static Node flag(ValueContext ctx) {
         boolean held = Values.flag(ctx, false);
         ToggleButton toggle = new ToggleButton(PickRules.flagLabel(held));
         toggle.setSelected(held);
         toggle.setMinWidth(52);
+        toggle.getStyleClass().add(Styles.SWITCH);
         toggle.selectedProperty().addListener((o, was, is) -> {
             toggle.setText(PickRules.flagLabel(is));
             ctx.set(is);
@@ -175,18 +178,28 @@ public final class BasicsEditors {
     private static Node number(ValueContext ctx, boolean whole) {
         double held = Values.number(ctx, whole ? 0 : 0.0);
         String shown = Slots.isEmpty(ctx) ? "" : whole ? Long.toString(Math.round(held)) : trim(held);
-        TextField field = Fields.committing(shown, whole ? "0" : "0.0", typed -> {
+        // The declared @Param(min, max), which only the host knows (2026-09-27): typed and stepped values are
+        // both held inside it, and the field says what it is.
+        Bounds bounds = ctx.bounds();
+        String range = PickRules.rangeLabel(bounds.min(), bounds.max());
+        TextField[] box = new TextField[1];
+        TextField field = Fields.committing(shown, range.isEmpty() ? whole ? "0" : "0.0" : range, typed -> {
             try {
-                Values.setNumber(ctx, Double.parseDouble(typed.trim()));
+                double wanted = Double.parseDouble(typed.trim());
+                double kept = PickRules.within(wanted, whole, bounds.min(), bounds.max());
+                if (kept != wanted) box[0].setText(whole ? Long.toString(Math.round(kept)) : trim(kept));
+                Values.setNumber(ctx, kept);
             } catch (NumberFormatException notANumber) {
                 // Left as typed. A cell that silently replaced it with 0 would lose what the user meant,
                 // and a cell that refused would be refusing for a reason it cannot explain.
             }
         });
+        box[0] = field;
         field.setPrefColumnCount(whole ? 8 : 10);
+        if (!range.isEmpty()) field.setTooltip(new Tooltip("Allowed: " + range));
 
         // The stepper (picker 6e3): ▲/▼ and the scroll wheel move by one, or by the last decimal place shown;
-        // Shift is ×10. Each step writes, like typing a number and pressing Enter.
+        // Shift is ×10. Each step writes, like typing a number and pressing Enter, and stops at the range's ends.
         java.util.function.BiConsumer<Integer, Boolean> step = (direction, shift) -> {
             double current;
             try {
@@ -194,7 +207,8 @@ public final class BasicsEditors {
             } catch (NumberFormatException notANumber) {
                 current = 0;
             }
-            double next = PickRules.step(current, whole, field.getText(), direction, shift);
+            double next = PickRules.within(PickRules.step(current, whole, field.getText(), direction, shift),
+                    whole, bounds.min(), bounds.max());
             field.setText(whole ? Long.toString(Math.round(next)) : trim(next));
             Values.setNumber(ctx, next);
         };

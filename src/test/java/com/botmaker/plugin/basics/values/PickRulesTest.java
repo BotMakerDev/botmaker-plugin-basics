@@ -33,6 +33,32 @@ class PickRulesTest {
         assertEquals(1.9, PickRules.step(2.0, false, "2", -1, false), 1e-9);
     }
 
+    private static final double NONE_LOW = Double.NEGATIVE_INFINITY;
+    private static final double NONE_HIGH = Double.POSITIVE_INFINITY;
+
+    @Test
+    void aNumberIsHeldInsideItsDeclaredRange() {
+        assertEquals(1, PickRules.within(1.1, false, 0, 1));
+        assertEquals(0, PickRules.within(-3, false, 0, 1));
+        assertEquals(0.4, PickRules.within(0.4, false, 0, 1));
+        assertEquals(7, PickRules.within(7, true, NONE_LOW, NONE_HIGH));
+    }
+
+    @Test
+    void aWholeNumberStaysWholeAtAFractionalEnd() {
+        // min 0.5 on an int: 0 is outside, and 0.5 is no int, so the nearest int inside is 1.
+        assertEquals(1, PickRules.within(0, true, 0.5, 9.5));
+        assertEquals(9, PickRules.within(12, true, 0.5, 9.5));
+    }
+
+    @Test
+    void theRangeReadsAsAPersonWritesIt() {
+        assertEquals("0 – 1", PickRules.rangeLabel(0, 1));
+        assertEquals("at most 10", PickRules.rangeLabel(NONE_LOW, 10));
+        assertEquals("at least 0.5", PickRules.rangeLabel(0.5, NONE_HIGH));
+        assertEquals("", PickRules.rangeLabel(NONE_LOW, NONE_HIGH));
+    }
+
     @Test
     void aStepLandsOnTheGridWithoutFloatingPointNoise() {
         assertEquals(0.3, PickRules.step(0.2, false, "0.2", 1, false));

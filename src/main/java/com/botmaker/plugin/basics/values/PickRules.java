@@ -49,6 +49,38 @@ public final class PickRules {
         return next.setScale(places, RoundingMode.HALF_UP).doubleValue();
     }
 
+    /**
+     * {@code value} held inside {@code min}–{@code max} (either end infinite for none): pulled to the nearest
+     * end, and for a whole number to the nearest whole number inside, so a fractional end on an {@code int}
+     * never writes a fraction.
+     *
+     * <p>Plain doubles rather than the contract's {@code Bounds}: this class reaches a bot, and a bot has no
+     * contract (BasicsIsBotSafeTest).
+     */
+    public static double within(double value, boolean whole, double min, double max) {
+        double clamped = Math.max(min, Math.min(max, value));
+        if (!whole) return clamped;
+        double low = Math.ceil(min);
+        double high = Math.floor(max);
+        if (low > high) return clamped;   // no whole number fits: the nearest end
+        return Math.max(low, Math.min(high, value));
+    }
+
+    /** The range as a person writes it — {@code 0 – 1}, {@code at most 10} — or {@code ""} when there is none. */
+    public static String rangeLabel(double min, double max) {
+        boolean low = min != Double.NEGATIVE_INFINITY;
+        boolean high = max != Double.POSITIVE_INFINITY;
+        if (low && high) return plain(min) + " – " + plain(max);
+        if (high) return "at most " + plain(max);
+        if (low) return "at least " + plain(min);
+        return "";
+    }
+
+    private static String plain(double value) {
+        return value == Math.rint(value) && Math.abs(value) < 1e15 ? Long.toString((long) value)
+                : BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+    }
+
     /** How many digits {@code typed} shows after its decimal point; 0 for none or for text that is no number. */
     static int decimals(String typed) {
         if (typed == null) return 0;
