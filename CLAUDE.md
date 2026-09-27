@@ -129,7 +129,9 @@ It owns three things, all three landed on 2026-09-09.
    what is left in JSON is what a bot does not read.** It was *"a user parameter is Java; a plugin's state
    is JSON"* until 2026-09-21, and the second half moved: an activity's enable flag is part of
    `com.botmaker.sdk.api.flow.Flow`, in the bot's own source, because it is part of what the bot does.
-   Capture targets and the flow editor's card positions stay JSON, because a bot reads neither.
+   Capture targets stay JSON, because a bot does not read them. The flow editor's card positions did too,
+   until 2026-09-27: they are the SDK's `@Managed("flow.layout")` value in `Sdk.java` now, and nothing
+   writes `flow-layout.json` any more.
 
    The reason is the same one both times: a name is a string on both sides, so a typo compiled and answered
    the type's fallback, and the declaration lived where the bot's author could not see it. `@Managed` is
