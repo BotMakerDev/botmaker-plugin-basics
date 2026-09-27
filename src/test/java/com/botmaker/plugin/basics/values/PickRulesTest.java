@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
 import java.time.Month;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The rules behind basics' reviewed pickers (picker 6e3), apart from their widgets. */
 class PickRulesTest {
@@ -79,6 +81,21 @@ class PickRulesTest {
         assertEquals(Optional.of('\t'), PickRules.charFrom("TAB"));
         assertEquals(Optional.of('w'), PickRules.charFrom("word"));
         assertEquals(Optional.empty(), PickRules.charFrom(""));
+    }
+
+    @Test
+    void theSpecialCharactersComeInThreeNamedGroups() {
+        assertEquals(List.of("Invisible", "Separators", "Brackets & quotes"),
+                PickRules.SPECIAL.stream().map(PickRules.CharGroup::title).toList());
+        assertEquals(List.of(' ', '\t', '\n'), PickRules.SPECIAL.getFirst().characters());
+        assertTrue(PickRules.SPECIAL.get(1).characters().contains(','));
+        assertTrue(PickRules.SPECIAL.get(2).characters().containsAll(List.of('(', ')', '"', '\'')));
+        // Every one of them is shown so it can be told apart, and typing that label gives it back.
+        for (PickRules.CharGroup group : PickRules.SPECIAL) {
+            for (char c : group.characters()) {
+                assertEquals(Optional.of(c), PickRules.charFrom(PickRules.charLabel(c)), "'" + c + "'");
+            }
+        }
     }
 
     @Test

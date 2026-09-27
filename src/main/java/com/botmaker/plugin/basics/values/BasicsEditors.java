@@ -15,6 +15,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -235,24 +236,51 @@ public final class BasicsEditors {
      * <p>The field takes one and keeps the first of anything longer, which is what a paste of a whole word
      * means: the author wanted its first letter, and refusing the paste outright says less. A character a
      * person cannot see is shown by name — {@code space}, {@code tab} — and typing that name means it
-     * (picker 6e3); ⋯ offers the symbols a bot most often splits or joins text with.
+     * (picker 6e3). <b>Special…</b> opens the characters that are hard to type or to see, in three labelled
+     * groups ({@link PickRules#SPECIAL}); a click picks one and closes it (feedback 2, 2026-09-27 — it was a ⋯
+     * menu of fifteen symbols that read as "other characters" and did not say why they were there).
+     *
+     * <p>The tooltip says what a character is <em>for</em>, because the question asked was how it differs
+     * from a key: a character is text, a key is something pressed.
      */
     public static Node character(ValueContext ctx) {
         String held = ctx.value(Character.class).map(PickRules::charLabel).orElse("");
         TextField field = Fields.committing(held, "a", typed ->
                 PickRules.charFrom(typed).ifPresent(ctx::set));
         field.setPrefColumnCount(6);
-        MenuButton symbols = Pills.bare("⋯");
-        for (char c : new char[] {' ', '\t', '\n', ',', ';', ':', '|', '-', '_', '/', '\\', '.', '#', '@', '*'}) {
-            symbols.getItems().add(Pills.item(PickRules.charLabel(c), () -> {
-                field.setText(PickRules.charLabel(c));
-                ctx.set(c);
-            }));
-        }
-        symbols.setTooltip(new Tooltip("Common symbols"));
-        HBox row = new HBox(4, field, symbols);
+        field.setTooltip(new Tooltip("A character is text: one letter of a string, or what OCR reads. "
+                + "To press something on the keyboard, use a Key instead.\n"
+                + "Type it, or a name: space, tab, newline."));
+        Button special = Pills.button("Special…", () -> specialCharacters(ctx, field));
+        special.setTooltip(new Tooltip("Spaces, separators, brackets and quotes"));
+        HBox row = new HBox(4, field, special);
         row.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(field, Priority.ALWAYS);
         return row;
+    }
+
+    /** The Special… grid: one labelled row per group, a button per character; a click is the answer. */
+    private static void specialCharacters(ValueContext ctx, TextField field) {
+        VBox groups = new VBox(8);
+        javafx.stage.Stage[] stage = new javafx.stage.Stage[1];
+        for (PickRules.CharGroup group : PickRules.SPECIAL) {
+            javafx.scene.layout.FlowPane buttons = new javafx.scene.layout.FlowPane(4, 4);
+            buttons.setPrefWrapLength(320);
+            for (char c : group.characters()) {
+                Button pick = new Button(PickRules.charLabel(c));
+                pick.setMinWidth(36);
+                pick.setTooltip(new Tooltip(String.format("U+%04X", (int) c)));
+                pick.setOnAction(e -> {
+                    field.setText(PickRules.charLabel(c));
+                    ctx.set(c);
+                    if (stage[0] != null) stage[0].close();
+                });
+                buttons.getChildren().add(pick);
+            }
+            Label title = Styles.on(new Label(group.title()), Styles.DIALOG_SUBHEADING);
+            groups.getChildren().add(new VBox(4, title, buttons));
+        }
+        stage[0] = Modals.form(ctx, "Special character", groups, null);
     }
 
     /**

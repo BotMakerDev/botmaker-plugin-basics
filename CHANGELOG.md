@@ -16,6 +16,9 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **The character picker explains itself.** The ⋯ menu is gone: **Special…** opens the hard-to-type
+  characters in three labelled groups (Invisible, Separators, Brackets & quotes), and the field's tooltip says
+  a character is text, where a `Key` is something pressed. `PickRules.SPECIAL` holds the groups.
 - **A number keeps to its declared range.** The stepper stops at `@Param(min, max)`, a typed value outside
   is pulled to the nearest end (a whole number to the nearest whole one inside), and the empty field and its
   tooltip say the range ("0 – 1", "at most 10").

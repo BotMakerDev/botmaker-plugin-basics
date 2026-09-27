@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.Month;
 import java.time.format.TextStyle;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -105,6 +106,20 @@ public final class PickRules {
         }
         return Optional.of(text.charAt(0));
     }
+
+    /** One labelled group of the character picker's Special… grid. */
+    public record CharGroup(String title, List<Character> characters) {
+    }
+
+    /**
+     * The characters the Special… grid offers (feedback 2, 2026-09-27): the ones a person cannot see, the ones
+     * a bot most often splits or joins text on, and the paired ones. It replaced a ⋯ menu of fifteen symbols
+     * in no order, which read as "other characters" and said nothing about why they were there.
+     */
+    public static final List<CharGroup> SPECIAL = List.of(
+            new CharGroup("Invisible", List.of(' ', '\t', '\n')),
+            new CharGroup("Separators", List.of(',', ';', ':', '|', '/', '\\', '-', '_', '.', '#', '@', '*')),
+            new CharGroup("Brackets & quotes", List.of('(', ')', '[', ']', '{', '}', '<', '>', '"', '\'', '`')));
 
     public static String flagLabel(boolean on) {
         return on ? "On" : "Off";
