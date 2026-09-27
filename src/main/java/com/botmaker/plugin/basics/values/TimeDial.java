@@ -1,8 +1,10 @@
 package com.botmaker.plugin.basics.values;
 
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
@@ -12,14 +14,24 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.util.StringConverter;
 
 import java.time.LocalTime;
+import java.time.OffsetTime;
+import java.time.ZoneOffset;
 
 /**
- * The time-of-day popup's body: a header {@code 07 : 30 : [00]}, a 24h clock dial (outer ring 1–12, inner
+ * The time-of-day popup's body: a header {@code [07] : [30] : [00]}, a 24h clock dial (outer ring 1–12, inner
  * 13–23 and 00; then a minute ring), quick chips and Now, and the time in words. Geometry is {@link ClockDial}'s.
  * Colours are the host's looked-up ones, so both themes draw it. Writes nothing — the caller reads
- * {@link #time()} on OK.
+ * {@link #time()} or {@link #offsetTime()} on OK.
+ *
+ * <p><b>The face alone takes the mouse (feedback 3).</b> Every drawn shape and number sits in one
+ * mouse-transparent layer. A press on the hand used to land on the hand, and the redraw that press caused
+ * removed it, so the drag that followed went to a node no longer on screen and the hand never moved.
+ *
+ * <p>With an offset (an {@code OffsetTime}), the offset is picked under the dial and named in the words; without
+ * one, the words say it is this computer's clock.
  */
 final class TimeDial {
 
@@ -32,38 +44,48 @@ final class TimeDial {
     private static final double INNER_AT = 0.55;
 
     private final Pane face = new Pane();
-    private final Label hours = new Label();
-    private final Label minutes = new Label();
+    private final Group drawn = new Group();
+    private final Spinner<Integer> hours = field(23);
+    private final Spinner<Integer> minutes = field(59);
+    private final Spinner<Integer> seconds = field(59);
+    private final ComboBox<ZoneOffset> offsets;
     private final Label summary = new Label();
-    private final Spinner<Integer> seconds = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59));
     private final VBox root;
     private int h;
     private int m;
     private int s;
+    private ZoneOffset offset;
     private Mode mode = Mode.HOUR;
     private boolean touched;
     private boolean refreshing;
 
+    /** A time on this computer's clock. */
     TimeDial(LocalTime initial) {
+        this(initial, null);
+    }
+
+    /** A time at {@code offset} from UTC, or on this computer's clock when it is {@code null}. */
+    TimeDial(LocalTime initial, ZoneOffset offset) {
         h = initial.getHour();
         m = initial.getMinute();
         s = initial.getSecond();
+        this.offset = offset;
 
-        ((SpinnerValueFactory.IntegerSpinnerValueFactory) seconds.getValueFactory()).setWrapAround(true);
-        seconds.setEditable(true);
-        seconds.setPrefWidth(72);
-        seconds.valueProperty().addListener((o, was, now) -> {
-            if (refreshing || now == null) return;
-            s = now;
-            touched = true;
-            refresh();
+        hours.valueProperty().addListener((o, was, now) -> typed(() -> h = now, now));
+        minutes.valueProperty().addListener((o, was, now) -> typed(() -> m = now, now));
+        seconds.valueProperty().addListener((o, was, now) -> typed(() -> s = now, now));
+        // The box being typed in is the ring being shown: hours on the hour ring, minutes on the minute one.
+        hours.focusedProperty().addListener((o, was, is) -> {
+            if (is) switchTo(Mode.HOUR);
         });
-
-        hours.setOnMouseClicked(e -> switchTo(Mode.HOUR));
-        minutes.setOnMouseClicked(e -> switchTo(Mode.MINUTE));
+        minutes.focusedProperty().addListener((o, was, is) -> {
+            if (is) switchTo(Mode.MINUTE);
+        });
         HBox header = new HBox(4, hours, new Label(":"), minutes, new Label(":"), seconds);
         header.setAlignment(Pos.CENTER);
 
+        drawn.setMouseTransparent(true);
+        face.getChildren().add(drawn);
         face.setMinSize(SIZE, SIZE);
         face.setPrefSize(SIZE, SIZE);
         face.setMaxSize(SIZE, SIZE);
@@ -94,10 +116,38 @@ final class TimeDial {
             chips.getChildren().add(chip);
         }
         Button now = new Button("Now");
-        now.setOnAction(e -> setTime(LocalTime.now().withNano(0)));   // a fixed value, never LocalTime.now()
+        // A fixed value, never LocalTime.now(); at an offset, now as that offset's clock reads it.
+        now.setOnAction(e -> setTime(this.offset == null ? LocalTime.now().withNano(0)
+                : OffsetTime.now(this.offset).toLocalTime().withNano(0)));
         chips.getChildren().add(now);
 
-        root = new VBox(10, header, face, chips, summary);
+        root = new VBox(10, header, face, chips);
+        if (offset != null) {
+            offsets = new ComboBox<>();
+            offsets.getItems().setAll(TimeText.offsets());
+            if (!offsets.getItems().contains(offset)) offsets.getItems().add(offset);
+            offsets.setValue(offset);
+            offsets.setConverter(new StringConverter<>() {
+                @Override public String toString(ZoneOffset value) {
+                    return value == null ? "" : TimeText.offset(value);
+                }
+                @Override public ZoneOffset fromString(String text) {
+                    return offsets.getValue();
+                }
+            });
+            offsets.valueProperty().addListener((o, was, is) -> {
+                if (is == null || refreshing) return;
+                this.offset = is;
+                touched = true;
+                refresh();
+            });
+            HBox at = new HBox(6, new Label("Offset"), offsets);
+            at.setAlignment(Pos.CENTER);
+            root.getChildren().add(at);
+        } else {
+            offsets = null;
+        }
+        root.getChildren().add(summary);
         root.setAlignment(Pos.CENTER);
         refresh();
     }
@@ -110,12 +160,51 @@ final class TimeDial {
         return LocalTime.of(h, m, s);
     }
 
-    /** Whether the person picked anything — the dial, a key, the seconds box, a chip or Now. */
+    /** The time at its offset; UTC for a dial opened without one. */
+    OffsetTime offsetTime() {
+        return OffsetTime.of(time(), offset == null ? ZoneOffset.UTC : offset);
+    }
+
+    /** Whether the person picked anything — the dial, a key, a box, a chip, Now or the offset. */
     boolean touched() {
         return touched;
     }
 
+    /**
+     * An hour, minute or second box: editable, wrapping, and holding its value when what is typed is not a
+     * number in range ({@link TimeText#field}) — the stock converter threw on a letter.
+     */
+    private static Spinner<Integer> field(int max) {
+        SpinnerValueFactory.IntegerSpinnerValueFactory values = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, max);
+        values.setWrapAround(true);
+        values.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer value) {
+                return value == null ? "" : String.format("%02d", value);
+            }
+            @Override public Integer fromString(String text) {
+                Integer read = TimeText.field(text, max);
+                return read != null ? read : values.getValue();
+            }
+        });
+        Spinner<Integer> spinner = new Spinner<>(values);
+        spinner.setEditable(true);
+        spinner.setPrefWidth(72);
+        // A refused entry is shown as the value it kept, not left in the box looking accepted.
+        spinner.getEditor().focusedProperty().addListener((o, was, is) -> {
+            if (!is) spinner.getEditor().setText(values.getConverter().toString(values.getValue()));
+        });
+        return spinner;
+    }
+
+    private void typed(Runnable apply, Integer now) {
+        if (refreshing || now == null) return;
+        apply.run();
+        touched = true;
+        refresh();
+    }
+
     private void switchTo(Mode next) {
+        if (mode == next) return;
         mode = next;
         refresh();
     }
@@ -143,22 +232,26 @@ final class TimeDial {
     }
 
     private void refresh() {
-        hours.setText(String.format("%02d", h));
-        minutes.setText(String.format("%02d", m));
-        hours.setStyle(mode == Mode.HOUR ? "-fx-font-weight: bold; -fx-underline: true;" : "");
-        minutes.setStyle(mode == Mode.MINUTE ? "-fx-font-weight: bold; -fx-underline: true;" : "");
         refreshing = true;
+        hours.getValueFactory().setValue(h);
+        minutes.getValueFactory().setValue(m);
         seconds.getValueFactory().setValue(s);
         refreshing = false;
-        summary.setText("= " + TimeText.words(time()));
+        hours.setStyle(mode == Mode.HOUR ? "-fx-font-weight: bold;" : "");
+        minutes.setStyle(mode == Mode.MINUTE ? "-fx-font-weight: bold;" : "");
+        summary.setText("= " + TimeText.words(time())
+                + (offset == null ? ", on this computer's clock" : " " + TimeText.offset(offset)));
         draw();
     }
 
     private void draw() {
-        face.getChildren().clear();
+        drawn.getChildren().clear();
+        // The whole face, invisible: the layer keeps the dial's size however far the hand reaches.
+        Circle bounds = new Circle(C, C, C);
+        bounds.setStyle("-fx-fill: transparent;");
         Circle rim = new Circle(C, C, R);
         rim.setStyle("-fx-fill: transparent; -fx-stroke: -bm-divider; -fx-stroke-width: 1;");
-        face.getChildren().add(rim);
+        drawn.getChildren().addAll(bounds, rim);
 
         double angle = mode == Mode.HOUR ? ClockDial.hourAngle(h) : ClockDial.minuteAngle(m);
         double reach = (mode == Mode.HOUR && ClockDial.inner(h) ? INNER_AT : OUTER_AT) * R;
@@ -167,7 +260,7 @@ final class TimeDial {
         hand.setStyle("-fx-stroke: -fx-accent; -fx-stroke-width: 2;");
         Circle knob = new Circle(tip[0], tip[1], 13);
         knob.setStyle("-fx-fill: -fx-accent; -fx-opacity: 0.35;");
-        face.getChildren().addAll(hand, knob);
+        drawn.getChildren().addAll(hand, knob);
 
         if (mode == Mode.HOUR) {
             for (int position = 0; position < 12; position++) {
@@ -185,14 +278,13 @@ final class TimeDial {
         // A fixed box centred on the point: a label is not measured until it is in a scene, so its own
         // preferred size would be zero here and every number would sit off-centre.
         Label label = new Label(text);
-        label.setMouseTransparent(true);
         label.setAlignment(Pos.CENTER);
         label.setMinSize(28, 20);
         label.setPrefSize(28, 20);
         if (small) label.setStyle("-fx-font-size: 0.85em; -fx-opacity: 0.8;");
         double[] p = point(angle, distance);
         label.relocate(p[0] - 14, p[1] - 10);
-        face.getChildren().add(label);
+        drawn.getChildren().add(label);
     }
 
     private static double[] point(double angle, double distance) {

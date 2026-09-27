@@ -10,8 +10,10 @@ repositories fit together; this file is what is true *here*.
 It owns three things, all three landed on 2026-09-09.
 
 1. **The JDK value types** — `String`, `boolean`, `int`, `double`, `char`, `java.awt.Color`,
-   `LocalDate`, `LocalTime`, `Duration`, and since 2026-09-27 (picker 6e3) the enums `DayOfWeek` and `Month`,
-   in `com.botmaker.plugin.basics.values`; eleven. `PickRules` holds their pickers' pure rules. They are nobody's
+   `LocalDate`, `LocalTime`, `Duration`, since 2026-09-27 (picker 6e3) the enums `DayOfWeek` and `Month`,
+   and since picker feedback 3 `OffsetTime` and its `ZoneOffset` (UTC written as `ZoneOffset.UTC` through
+   `ComponentType.constants()`, other offsets as `ZoneOffset.ofHoursMinutes`),
+   in `com.botmaker.plugin.basics.values`; thirteen. `PickRules` holds their pickers' pure rules. They are nobody's
    vocabulary in particular, and they were the SDK's only because the SDK was written first. The SDK keeps
    its own eight (`ImageTemplate`, `Precision`, `Point`, `Rect`, `Size`, `Direction`, `Key`,
    `MouseButton`), which genuinely are its.

@@ -33,6 +33,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Month;
+import java.time.OffsetTime;
+import java.time.ZoneOffset;
 
 /**
  * The widgets for {@link BasicsTypes}' eleven.
@@ -326,6 +328,45 @@ public final class BasicsEditors {
             });
         });
         return pill[0];
+    }
+
+    /**
+     * A time of day at an offset from UTC (feedback 3): the same dial, with the offset picked under it. A slot
+     * the host could not read opens on midnight UTC.
+     */
+    public static Node offsetTime(ValueContext ctx) {
+        Button[] pill = new Button[1];
+        pill[0] = Pills.button(offsetTimeLabel(ctx), () -> {
+            OffsetTime before = ctx.value(OffsetTime.class).orElse(null);
+            OffsetTime start = before == null ? OffsetTime.of(0, 0, 0, 0, ZoneOffset.UTC) : before.withNano(0);
+            TimeDial dial = new TimeDial(start.toLocalTime(), start.getOffset());
+            Modals.form(ctx, "Time of day", dial.node(), () -> {
+                OffsetTime after = dial.offsetTime();
+                if (commit(ctx, before, after, dial.touched())) pill[0].setText(TimeText.pill(after));
+            });
+        });
+        return pill[0];
+    }
+
+    /** What an offset time pill says: {@code 07:30 UTC}, the source as written, or {@code Time…} when empty. */
+    static String offsetTimeLabel(ValueContext ctx) {
+        return ctx.value(OffsetTime.class).map(TimeText::pill)
+                .orElseGet(() -> Slots.isEmpty(ctx) ? "Time…" : Slots.raw(ctx));
+    }
+
+    /** An offset from UTC: a pill naming it ({@code UTC+02:00}) that opens every offset clocks keep. */
+    public static Node zoneOffset(ValueContext ctx) {
+        ZoneOffset held = ctx.value(ZoneOffset.class).orElse(null);
+        MenuButton pill = Pills.bare(held == null ? Values.labelOr(ctx.source(), "Offset…") : TimeText.offset(held));
+        for (ZoneOffset offset : TimeText.offsets()) {
+            javafx.scene.control.MenuItem item = new javafx.scene.control.MenuItem(TimeText.offset(offset));
+            item.setOnAction(e -> {
+                pill.setText(TimeText.offset(offset));
+                if (!offset.equals(ctx.value(ZoneOffset.class).orElse(null))) ctx.set(offset);
+            });
+            pill.getItems().add(item);
+        }
+        return pill;
     }
 
     /** What a time pill says: {@code 07:30}, the source as written, or {@code Time…} when empty. */

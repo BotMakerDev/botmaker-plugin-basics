@@ -76,11 +76,15 @@ class BasicsPluginTest {
     }
 
     @Test
-    void the_types_are_the_eleven_this_plugin_declares() {
+    void the_types_are_the_thirteen_this_plugin_declares() {
         // Through the plugin rather than through BasicsTypes.ALL directly: what a host gets is the memoised
         // buildTypes() hook, and a plugin that declares types nobody can reach is the bug.
         assertEquals(BasicsTypes.ALL, plugin.types());
-        assertEquals(11, plugin.types().size(), plugin.types().toString());
+        assertEquals(13, plugin.types().size(), plugin.types().toString());
+        // A time at an offset and the offset itself since picker feedback 3.
+        List<Class<?>> timeTypes = plugin.types().stream().<Class<?>>map(PluginType::type).toList();
+        assertTrue(timeTypes.contains(java.time.OffsetTime.class) && timeTypes.contains(java.time.ZoneOffset.class),
+                timeTypes.toString());
         // DayOfWeek and Month since picker 6e3: a JDK type is basics' to draw, enum or not.
         List<Class<?>> classes = plugin.types().stream().<Class<?>>map(PluginType::type).toList();
         assertTrue(classes.contains(java.time.DayOfWeek.class) && classes.contains(java.time.Month.class),

@@ -11,11 +11,19 @@ heading in that module's own release commit.
 
 ### Added
 
+- **A time at an offset from UTC.** `OffsetTime` is a basics type, written
+  `OffsetTime.of(7, 30, 0, 0, ZoneOffset.UTC)`: the same dial, with the offset picked under it (every offset
+  clocks keep, UTC first to hand), and a game's daily reset at 00:00 UTC is one value. `ZoneOffset` is a type
+  of its own too, a pill listing the offsets; UTC is written `ZoneOffset.UTC`, any other
+  `ZoneOffset.ofHoursMinutes(2, 0)`.
 - **`DayOfWeek` and `Month` are basics' types.** A day is a row of seven toggles (Mon–Sun); a month is a pill
   opening the twelve as a grid. They replace the host's generic enum dropdown.
 
 ### Changed
 
+- **The time dial's hand drags**, and hours, minutes and seconds are three boxes you can type in. Clicking the
+  hours or minutes box shows that ring; a letter or an out-of-range number is refused and the box keeps its
+  value (it threw). The words say "on this computer's clock" for a local time, and the offset for the other.
 - **The character picker explains itself.** The ⋯ menu is gone: **Special…** opens the hard-to-type
   characters in three labelled groups (Invisible, Separators, Brackets & quotes), and the field's tooltip says
   a character is text, where a `Key` is something pressed. `PickRules.SPECIAL` holds the groups.

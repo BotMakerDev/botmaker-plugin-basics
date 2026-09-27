@@ -16,11 +16,14 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.Month;
+import java.time.OffsetTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /**
- * The eleven types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
- * day, a duration, and (since picker 6e3) a day of the week and a month.
+ * The thirteen types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
+ * day, a duration, (since picker 6e3) a day of the week and a month, and (since picker feedback 3) a time of
+ * day at an offset from UTC and the offset itself.
  *
  * <h2>These were the SDK's, and moving them is the point</h2>
  *
@@ -198,6 +201,73 @@ public final class BasicsTypes {
     }
 
     /**
+     * A time of day at an offset from UTC (feedback 3) — {@code OffsetTime.of(7, 30, 0, 0, ZoneOffset.UTC)}. A
+     * {@link TimeType} is the clock of the computer the bot runs on; this one is the same moment anywhere,
+     * which is what a game's daily reset at 00:00 UTC is. Nanoseconds are always written as 0, so the Java is
+     * the one {@code OffsetTime.of} a person writes.
+     */
+    public static final class OffsetTimeType extends AbstractPluginType<OffsetTime>
+            implements EditableType<OffsetTime>, ComponentType<OffsetTime> {
+        public OffsetTimeType() { super(OffsetTime.class); }
+        @Override public OffsetTime fresh() { return OffsetTime.of(0, 0, 0, 0, ZoneOffset.UTC); }
+        @Override public Node editor(ValueContext ctx) { return BasicsEditors.offsetTime(ctx); }
+        @Override public Node preview(ValueContext ctx) { return new Label(BasicsEditors.offsetTimeLabel(ctx)); }
+
+        @Override public Executable factory() {
+            return method(OffsetTime.class, "of", int.class, int.class, int.class, int.class, ZoneOffset.class);
+        }
+        @Override public List<Class<?>> componentTypes() {
+            return List.of(int.class, int.class, int.class, int.class, ZoneOffset.class);
+        }
+        @Override public List<Object> components(OffsetTime t) {
+            return List.of(t.getHour(), t.getMinute(), t.getSecond(), t.getNano(), t.getOffset());
+        }
+        @Override public OffsetTime build(List<Object> parts) {
+            try {
+                return OffsetTime.of(whole(parts, 0), whole(parts, 1), whole(parts, 2), whole(parts, 3),
+                        (ZoneOffset) parts.get(4));
+            } catch (RuntimeException impossibleTime) {
+                return fresh();
+            }
+        }
+    }
+
+    /**
+     * An offset from UTC, part of an {@link OffsetTimeType} (feedback 3). {@code ZoneOffset.UTC} is written as
+     * that constant ({@link #constants}); any other offset as {@code ZoneOffset.ofHoursMinutes(h, m)}, the
+     * minutes carrying the hours' sign.
+     */
+    public static final class ZoneOffsetType extends AbstractPluginType<ZoneOffset>
+            implements EditableType<ZoneOffset>, ComponentType<ZoneOffset> {
+        public ZoneOffsetType() { super(ZoneOffset.class); }
+        @Override public ZoneOffset fresh() { return ZoneOffset.UTC; }
+        @Override public Node editor(ValueContext ctx) { return BasicsEditors.zoneOffset(ctx); }
+
+        @Override public Executable factory() {
+            return method(ZoneOffset.class, "ofHoursMinutes", int.class, int.class);
+        }
+        @Override public List<Class<?>> componentTypes() { return List.of(int.class, int.class); }
+        @Override public List<Object> components(ZoneOffset offset) {
+            int total = offset.getTotalSeconds();
+            return List.of(total / 3600, (total % 3600) / 60);
+        }
+        @Override public ZoneOffset build(List<Object> parts) {
+            try {
+                return ZoneOffset.ofHoursMinutes(whole(parts, 0), whole(parts, 1));
+            } catch (RuntimeException impossibleOffset) {
+                return fresh();
+            }
+        }
+        @Override public List<java.lang.reflect.Field> constants() {
+            try {
+                return List.of(ZoneOffset.class.getField("UTC"));
+            } catch (NoSuchFieldException e) {
+                throw new IllegalStateException("ZoneOffset.UTC is gone", e);
+            }
+        }
+    }
+
+    /**
      * A length of time, written as milliseconds.
      *
      * <p>One spelling, {@code Duration.ofMillis(n)}, so there is one rule for writing and one for reading.
@@ -258,11 +328,11 @@ public final class BasicsTypes {
     }
 
     /**
-     * The eleven, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
-     * with, then the five time types.
+     * The thirteen, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
+     * with, then the seven time types.
      */
     public static final List<PluginType<?>> ALL = List.of(
             new TextType(), new FlagType(), new WholeType(), new DecimalType(), new CharacterType(),
-            new ColorType(), new DateType(), new TimeType(), new DurationType(), new DayOfWeekType(),
-            new MonthType());
+            new ColorType(), new DateType(), new TimeType(), new OffsetTimeType(), new ZoneOffsetType(),
+            new DurationType(), new DayOfWeekType(), new MonthType());
 }
