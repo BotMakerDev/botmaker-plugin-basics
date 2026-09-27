@@ -354,6 +354,37 @@ public final class BasicsEditors {
                 .orElseGet(() -> Slots.isEmpty(ctx) ? "Time…" : Slots.raw(ctx));
     }
 
+    // ---- previews: a value shown, not edited ------------------------------------------------------------
+    //
+    // Here rather than as lambdas in BasicsTypes: a lambda answering `new Label(…)` where a Node is declared
+    // makes the verifier load both classes when BasicsTypes loads, so a host without JavaFX could not read
+    // this plugin's type list at all. Declared as Node, and only linked when the host draws.
+
+    /** A time of day, read-only. */
+    public static Node timePreview(ValueContext ctx) {
+        return new Label(timeLabel(ctx));
+    }
+
+    /** A time at an offset from UTC, read-only. */
+    public static Node offsetTimePreview(ValueContext ctx) {
+        return new Label(offsetTimeLabel(ctx));
+    }
+
+    /** A length of time, read-only, in words. */
+    public static Node durationPreview(ValueContext ctx) {
+        return new Label(durationLabel(ctx, ctx.value(Duration.class).orElse(null)));
+    }
+
+    /** A day of the week, read-only, short. */
+    public static Node dayOfWeekPreview(ValueContext ctx) {
+        return new Label(ctx.value(DayOfWeek.class).map(PickRules::shortName).orElse(""));
+    }
+
+    /** A month, read-only, in full. */
+    public static Node monthPreview(ValueContext ctx) {
+        return new Label(ctx.value(Month.class).map(PickRules::longName).orElse(""));
+    }
+
     /** An offset from UTC: a pill naming it ({@code UTC+02:00}) that opens every offset clocks keep. */
     public static Node zoneOffset(ValueContext ctx) {
         ZoneOffset held = ctx.value(ZoneOffset.class).orElse(null);

@@ -21,6 +21,17 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **`BasicsTypes` declares each type as one constant** (`TEXT`, `FLAG`, …, `MONTH`) built with the toolkit's
+  `Types`; the thirteen nested `…Type` classes and the private `method` helper are gone. `ALL` is unchanged
+  in content and order. Breaking for code that named a nested class; nothing outside this module did.
+
+### Fixed
+
+- **`botmaker plugin validate` checks this plugin's types headless.** A preview written `new Label(…)` made
+  the verifier load JavaFX when the type list loaded, so on the registry's CI the value-type, record and
+  managed checks were skipped as "could not be linked". The previews are `BasicsEditors` methods declared as
+  `Node`; `BasicsPluginHeadlessTest` reads the list with no JavaFX on the classpath.
+
 - **The time dial's hand drags**, and hours, minutes and seconds are three boxes you can type in. Clicking the
   hours or minutes box shows that ring; a letter or an out-of-range number is refused and the box keeps its
   value (it threw). The words say "on this computer's clock" for a local time, and the offset for the other.
