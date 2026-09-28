@@ -1,224 +1,77 @@
 # CLAUDE.md — botmaker-plugin-basics
 
-Guidance for Claude Code working in this module. The umbrella's `CLAUDE.md` is the map of how the eleven
-repositories fit together; this file is what is true *here*.
+Guidance for Claude Code working in this module. The umbrella's `CLAUDE.md` is the map of how the
+repositories fit together; this file is what is true *here*. How the module got here — `Settings.forPlugin`,
+the `PluginData` store, `ParameterStore`, `JdkText`, the grammars, `@Managed` and `@Param` before they moved to
+the contract, the bot-safe rule — is in `../docs/refactor/31-umbrella-history.md` (*basics*), and the text this
+file carried until 2026-09-28 is `git show ee3690b:CLAUDE.md` in this repository.
 
 ## What this module is
 
-**Plugin #2**, and the first plugin in the project that is not the SDK. Its id is `com.botmaker.basics`.
+**Plugin #2**, id `com.botmaker.basics`: **the JDK value types and their editors, and nothing else.** Nothing
+here runs in a bot. The SDK depends on it so a project can edit JDK values, and a project started from the
+*Base* template depends on it directly so its Parameters window offers any type at all.
 
-> **Since 2026-09-28 it owns the JDK value types and their editors, and nothing else.** `store.PluginData`,
-> `store.Settings` (items 2, 3 and 6 below) had no caller left and are deleted with Jackson;
-> `managed.ManagedValues` (item 5) is the contract's `com.botmaker.plugin.api.managed.ManagedValues`, typed by
-> a plugin's `ManagedValue<T>`. Nothing here runs in a bot, so `BasicsIsBotSafeTest` is deleted and the third
-> rule below is history. Read the numbered items as how the module got here.
->
-> **Also since 2026-09-28 it names no toolkit class to declare itself**: `BasicsPlugin` is a contract
-> `DeclaredPlugin` built from `StudioPlugin.id(ID).named(NAME).types(() -> BasicsTypes.ALL)`, and each type is
-> a `PluginType.value(…)` whose factory is a method reference (`LocalDate::of`) and whose build is derived by
-> invoking it — a value out of range builds nothing and is shown as written.
+Thirteen types, in `com.botmaker.plugin.basics.values`: `String`, `boolean`, `int`, `double`, `char`,
+`java.awt.Color`, `LocalDate`, `LocalTime`, `Duration`, the enums `DayOfWeek` and `Month`, `OffsetTime` and
+its `ZoneOffset` (UTC written as `ZoneOffset.UTC` through `ComponentType.constants()`, other offsets as
+`ZoneOffset.ofHoursMinutes`). They are nobody's vocabulary in particular; the SDK keeps the types that are
+its own.
 
-It owned three things, all three landed on 2026-09-09.
+- **`BasicsPlugin`** is one contract declaration: `StudioPlugin.id(ID).named(NAME).types(() ->
+  BasicsTypes.ALL)` on `DeclaredPlugin`. It names no toolkit class.
+- **`BasicsTypes`** holds the declarations: each type a `PluginType.value(…)` whose factory is a method
+  reference (`LocalDate::of`, `Color::new`) with its parts' accessors, the build derived by invoking it — a
+  value out of range builds nothing and is shown as written.
+- **`BasicsEditors`** draws them out of the toolkit's shapes (`Fields.committing`, `Fields.stepped`,
+  `Modals.form`, `Pills`, `Slots.sourceOr`). `DurationPicker` (presets, spinners that carry, the length in
+  words) draws `Duration`, and `TimeDial` (a 24h two-ring clock) draws `LocalTime` and `OffsetTime`.
+- **The pickers' rules are pure and tested without a screen**: `PickRules`, `DurationParts`/`DurationText`,
+  `ClockDial`/`TimeText`. Both views write only through `BasicsEditors.commit` — what was picked, and only
+  when it differs from what was read — so opening a picker and pressing OK leaves the file byte-identical.
 
-1. **The JDK value types** — `String`, `boolean`, `int`, `double`, `char`, `java.awt.Color`,
-   `LocalDate`, `LocalTime`, `Duration`, since 2026-09-27 (picker 6e3) the enums `DayOfWeek` and `Month`,
-   and since picker feedback 3 `OffsetTime` and its `ZoneOffset` (UTC written as `ZoneOffset.UTC` through
-   `ComponentType.constants()`, other offsets as `ZoneOffset.ofHoursMinutes`),
-   in `com.botmaker.plugin.basics.values`; thirteen. `PickRules` holds their pickers' pure rules. They are nobody's
-   vocabulary in particular, and they were the SDK's only because the SDK was written first. The SDK keeps
-   its own eight (`ImageTemplate`, `Precision`, `Point`, `Rect`, `Size`, `Direction`, `Key`,
-   `MouseButton`), which genuinely are its.
-
-   **Two classes since 2026-09-22, and both are editor-side.** `BasicsTypes` holds the `PluginType`
-   declarations — the class, a `fresh()` that returns a real value, the editor — with a `ComponentType`
-   beside the four whose Java is a call (`Color`, `LocalDate`, `LocalTime`, `Duration`). `BasicsEditors`
-   draws them, out of the toolkit's generic shapes.
-
-   **`JdkText` and `BasicsValueTypes` are deleted, and with them the bot-safe/editor-side split inside this
-   feature.** `JdkText` answered *what does this stored text mean* for a running bot, and nothing stores
-   text: a parameter is a `@Param` field (2026-09-17) and a plugin's values are `@Managed` methods
-   (2026-09-21). `BasicsValueTypes` was the other half — four string methods per type, of which the writing
-   half was wired wrong (a `java.awt.Color` parameter opened and closed came back rewritten) and the
-   reading half had no caller at all.
-2. **`Settings.forPlugin`**, in `com.botmaker.plugin.basics.store` — how a *running bot* reads a plugin's
-   own file, one plugin id plus one document name to one path.
-
-   **The reading half and the whole grammar layer went on 2026-09-21.** `Settings.load`/`loadAll`/`enabled`/
-   `declares`/`use`, `ValueGrammar`, this module's `BasicsGrammar` and the `ServiceLoader` that found them
-   are deleted. They existed to answer *what does this stored text mean* for a value a bot read out of
-   JSON, and a bot reads no such value any more: a user parameter is a `@Param` field in the bot's own Java
-   (2026-09-17) and a plugin's values are Java the plugin ships (2026-09-21). `Settings.enabled` in
-   particular had to go rather than be deprecated — it read `activities.json`, so with that file gone it
-   could only ever have answered `false`, which is a method that compiles, runs, and switches every
-   activity off. **Deleting beats deprecating whenever a kept method has no data source left**: the method
-   still answers, and what it answers is a fallback.
-
-   `JdkText` went with them on 2026-09-22. What it did that still had to happen — reading the text a user
-   types into a cell — is the widget's own job in `BasicsEditors`, over a `TextField` rather than over a
-   stored string; and reading a *bot's Java* is the host's, once and for every plugin.
-3. **The project store** — `PluginData`, and since 2026-09-22 it is the whole of it. A plugin's data is a
-   **folder of its own files**, `plugins/<id prefix>/<last segment>/<name>.json` inside the project's
-   resources, so `com.botmaker.sdk` writes under `plugins/com.botmaker/sdk/`: a folder per author and a
-   folder per plugin, derived from the id alone with no new metadata. `PluginData` is the layout, the
-   creation on demand, the name normalisation that stops `Activities` and `activities` becoming two files,
-   and the four operations over one file: `read` (a `JsonNode` from a directory), `write`, `load` (the same
-   document off a bot's classpath) and `convert` (a document as a record). **A bot enumerates nothing** —
-   `PluginData.resource(id, name)` resolves one classpath path, which is what makes a tree readable from
-   inside a jar.
-
-   It was **three classes until 2026-09-22**: `ProjectStore` held one document and did the I/O,
-   `PluginStore` wrapped it for typed reads and writes, and this named the file. That layering was built
-   for a store with several customers and ended with one and a half — `FlowLayout`'s card positions, and
-   `Settings.forPlugin` on the bot side. Everything else moved into the bot's own Java: a parameter is a
-   `@Param` field, a plugin's value is a `@Managed` method, the flow is a `Flow`, and the capture source
-   went the same way in the change that collapsed these. **Reading is total and writing throws** — those
-   answers are `ProjectStore`'s and `PluginStore`'s, kept verbatim rather than re-decided.
-
-   It was **one file sectioned by owning plugin id** until 2026-09-10, with a `withSection` that carried
-   every other plugin's section through so an editor without a plugin installed could not save that
-   plugin's data away. The maintainer withdrew it. Two of the single file's four defences survive and are
-   why the tree is better rather than merely different: no code opens another plugin's file at all, so the
-   carry-through becomes unnecessary rather than merely correct, and a merge conflict lands in one plugin's
-   file instead of in one shared document. Two are lost and are stated plainly: the single atomic write goes
-   — a crash mid-save can leave one plugin saved and another not — and a project is a directory to copy
-   rather than a file. **There is no migration**: nothing reads the legacy `activities.json` as plugin data,
-   so a project written before the tree reads as empty; nothing deletes it either, so a converter is
-   writable later.
-
-4. **`ParameterStore` stood here from 2026-09-10 to 2026-09-22 and is deleted, with `StoredForms` and
-   `PluginData.PARAMETERS`.** It was how *any* plugin was to declare parameters — rows in, rows out, and the
-   coercion between: canonicalise through the owning type's codec, clamp to a declared `Range`, prune a value
-   to the options still on offer, seed a fresh one with the type's default. 582 lines, generalised out of the
-   SDK where it was `SdkParameters`, and defended at length the week it landed.
-
-   **Nothing ever called `declare`.** Not this module, not the SDK, not Studio. So the only rows it ever
-   returned were whatever a project written before 2026-09-17 already had in
-   `plugins/<prefix>/<segment>/parameters.json`, and nothing wrote that file again. *A converter is a second
-   reader of a format nothing writes* — the umbrella `CLAUDE.md` forbids it by name, and this was one. It is
-   the same failure shape as `ValueCodec.wireOfLiteral`, which this file already records: **the half nobody is
-   forced to write is the half that rots.** Here the rotted half was the writing half, so the reading half had
-   nothing to read.
-
-   **What replaced it had already replaced it.** A user parameter became a `@Param` field in the bot's own
-   Java on 2026-09-17, read and written off the syntax tree. The case this store was kept for — *a plugin's
-   own row, an activity's enable flag, a capture target* — has the better answer on the same terms: **the
-   plugin puts a `@Param` field in the file it ships**, and the host's ordinary walk of the bot's sources
-   finds it. One file format, one editor, and a row the bot's author can read.
-
-   The contract half went with it (`ParameterGroup`, `ParameterEdit`, `StudioPlugin.parameters(String)`,
-   `parameterRows(String)`, `parameterEdited(…)`); `ParameterRow` stays as the shape one row crosses in.
-   `ValueCatalog.initializerOfWires`, `wiresOfInitializer`, `defaultItem` and `normalize` lost their nine
-   call sites here, which is the porting phase that was owed and is now moot.
-
-5. **`@Managed`**, in `com.botmaker.plugin.basics.managed`, added 2026-09-21. One member, the plugin-local
-   id; `@Target({TYPE, METHOD})`. On a `public static` method it says *the host owns the expression this
-   returns* — one fixed value the plugin shipped, rewritten in place and never added to or deleted. On a
-   type it says *the host owns the members* — an open set the user grows, which is what 🖼 Manage Pictures
-   does to `Pictures`.
-
-   **It moved to `com.botmaker.plugin.api.managed` on 2026-09-22, with `@Param`.** It was here because a
-   bot had no contract jar — this module declares the contract `provided` — and both annotations land on a
-   bot's own declarations. The SDK brings the contract at `compile` now, so a bot has one. `ManagedValues`,
-   which reads `@Managed` at run time inside a bot, reflects against the contract's copy;
-   `BasicsIsBotSafeTest` names those two packages as the ones that legitimately travel, by package, so a
-   third one reaching a bot is still a red test.
-
-   It replaced `ManagedField` and `StudioPlugin.managedFields()`, which matched on a *declared type* and
-   guessed that a class of nothing but managed constants was managed whole — two inferences from shape,
-   where this is a statement.
-
-6. **`@Param` and `Settings.forPlugin`**, and together they are the split that matters now.
-   `com.botmaker.plugin.api.params.Param` (2026-09-17 here, moved to the contract 2026-09-22) is how a
-   **user parameter** is declared: a
-   `public static` field in the *bot's own Java*, which Studio reads off the syntax tree and whose
-   initializer the value cell rewrites. `Settings.forPlugin` — over `PluginData.load`/`convert` — is how a
-   bot reads a **plugin's own state**: a record out, off one resolved classpath path. The editor's side of
-   the same file is `PluginData.read`/`write`. `PluginStore` was the typed wrapper over both halves until
-   2026-09-22; it folded into `PluginData` when its last customer moved into Java.
-
-   **The rule to hold on to, as it now stands: a user parameter is Java, a plugin's values are Java, and
-   what is left in JSON is what a bot does not read.** It was *"a user parameter is Java; a plugin's state
-   is JSON"* until 2026-09-21, and the second half moved: an activity's enable flag is part of
-   `com.botmaker.sdk.api.flow.Flow`, in the bot's own source, because it is part of what the bot does.
-   Capture targets stay JSON, because a bot does not read them. The flow editor's card positions did too,
-   until 2026-09-27: they are the SDK's `@Managed("flow.layout")` value in `Sdk.java` now, and nothing
-   writes `flow-layout.json` any more.
-
-   The reason is the same one both times: a name is a string on both sides, so a typo compiled and answered
-   the type's fallback, and the declaration lived where the bot's author could not see it. `@Managed` is
-   that argument applied to the plugin's own values — see `Managed`'s javadoc and
-   `docs/refactor/33-plugin-java.md`.
-
-   **`Param.min` and `max` are `double` since the move**, defaulting to negative and positive infinity.
-   They were strings so a duration bound could be written `"30s"` and a codec would parse it, and no plugin
-   parses anything now. `visibility` stays a `String` for a different reason that still holds: an
-   annotation element's value is written into a bot's class file, so pinning it to the contract's
-   `Visibility` enum would make renaming a constant a break in every compiled bot. It declares
-   `Param.EDITOR`/`Param.PUBLIC` so neither Studio nor a bot spells those two strings itself.
-
-## The three rules that decide everything here
+## The two rules that decide everything here
 
 **A plugin, not a platform module.** Studio does not ship, resolve or depend on this artifact. That is why
 the contract and JavaFX are `provided` (the host has one copy of each and `PluginLoader` is parent-first for
-both) and everything else is `compile` (it travels onto the project's own classloader). Nothing is
+both) and the toolkit is `compile` (it travels onto the project's own classloader). Nothing is
 `optional` — `optional` means *not transitive*, which is invisible in the module that has the bug and which
 this project has shipped three times.
 
 **Other plugins compile against this one, so it is not freely breakable.** The SDK declares it at
-`compile` scope since 2026-09-09. A plugin's compiled `.class` files cannot be rewritten by anybody, so everything public
-here owes **never-delete** and `@ReplacedBy`, exactly as `com.botmaker.sdk.api` does — and the trap that
-comes with it is Maven's **nearest-wins** mediation: nothing may declare this module directly beside a
-plugin that already brings it, or a bot resolves a version its plugin was never built against and fails
-with `NoSuchMethodError` at whichever method moved. That is precisely the landmine
-`MavenService.TOOLKIT_FALLBACK_VERSION` was, and why that constant is deleted.
-
-**Most of this module runs in a bot, and that part may name neither the contract nor JavaFX.** A bot's
-classpath has no contract on it and no scene graph in it. `BasicsIsBotSafeTest` scans the **source** —
-rather than the classpath, where a `provided` dependency is present in the module that declares it, so the
-check would pass for a jar that cannot load anywhere else — and it works by **exemption**: everything is
-checked, and only `BasicsPlugin`, `BasicsTypes` and `BasicsEditors` are named as editor-side. The two
-contract packages that genuinely travel to a bot (`…api.params`, `…api.managed`) are named as such, by
-package, for the same reason. That is the inverse of the
-rule it replaced (`ToolkitConfigIsBotSafeTest` named the one package that had to be safe), and the direction
-matters: a class added tomorrow is checked by default, so the mistake is a red test here rather than a
-`NoClassDefFoundError` in a stranger's bot.
+`compile` scope. A plugin's compiled `.class` files cannot be rewritten by anybody, so everything public here
+owes **never-delete** and `@ReplacedBy`, exactly as `com.botmaker.sdk.api` does — and the trap that comes
+with it is Maven's **nearest-wins** mediation: nothing may declare this module directly beside a plugin that
+already brings it, or a bot resolves a version its plugin was never built against and fails with
+`NoSuchMethodError` at whichever method moved.
 
 ## The types, and the two laws they keep
 
 **The identity is the Java class, not an id.** A project's file says `java.time.Duration` because that is
-what the field is declared as, and has done since a parameter became a `@Param` field. The persisted ids
-(`TEXT`, `YES_NO`, `DURATION`, …) were the last thing still reading the enum vocabulary; nothing writes one
-any more, and they went with `ValueType` on 2026-09-22.
+what the field is declared as.
 
 **A primitive is what is declared**, not its box: `int.class`, not `Integer.class`, because `int` is what a
 bot's field is overwhelmingly declared as and a picker offering both would offer one type twice. A field
-declared `Integer` resolves to the same declaration — the rule `ValueCatalog.forJava` applied, which the
-host still does.
+declared `Integer` resolves to the same declaration.
 
 Two laws, both checked by `BasicsPluginTest` here and by `botmaker plugin validate` over any plugin:
 
-- **`build(components(v))` equals `v`**, and the number of components matches `componentTypes()`. A type
-  whose `build` does not invert its `components` writes a user's file and reads it back as something else,
-  which is exactly what `literal(parse(…))` did to a colour.
+- **`build(components(v))` equals `v`**, and the number of components matches the declared parts. A type
+  whose build does not invert its components writes a user's file and reads it back as something else.
 - **`fresh()` answers a real value of the declared type, without throwing.** A type that cannot say what a
   fresh one is cannot be offered in a picker.
 
 **Two plugins may not *own* one type** — the host refuses it, because a project that opens differently
 depending on which plugin loaded first is not a project. Offering an *editor* for somebody else's type is
-not owning it: the SDK does exactly that for `Duration` and `Color` (see below), and the host asks the user
-which to use. **A type no loaded plugin declares is not an error either**: the value keeps the expression
-its author wrote, renders read-only and is never rewritten.
+not owning it, and the host asks the user which to use. **A type no loaded plugin declares is not an error
+either**: the value keeps the expression its author wrote, renders read-only and is never rewritten.
 
-## The SDK overrides one of these, and it is the one thing named twice
+## The SDK overrides one of these
 
 The rule (the maintainer's, 2026-09-27): **basics draws the JDK types, the SDK only its own.** `Color` is the
-one exception: it is declared here and drawn plainly here, and the SDK offers an eyedropper through
-`slotEditors()` that samples a frozen frame of the **capture target** — screen capture this plugin does not
-have. The host asks the user which editor to use. The SDK's `Duration` override was deleted on 2026-09-27;
-`DurationPicker` here (presets, spinners that carry, the length in words) is the only one, and `TimeDial`
-(a 24h two-ring clock) draws `LocalTime`. Their rules live in the bot-safe `DurationParts`/`DurationText` and
-`ClockDial`/`TimeText`, tested without a screen; both views write only through `BasicsEditors.commit` (what
-was picked, and only when it differs from what was read).
+one exception: it is declared here and drawn plainly here, and the SDK offers an eyedropper that samples a
+frozen frame of the capture target — screen capture this plugin does not have. The host asks the user which
+editor to use.
 
 ## Building and releasing
 
