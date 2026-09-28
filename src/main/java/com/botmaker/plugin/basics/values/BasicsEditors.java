@@ -140,7 +140,7 @@ public final class BasicsEditors {
     /** A month: a pill naming it that opens the twelve as a three-by-four grid (picker 6e3). */
     public static Node month(ValueContext ctx) {
         Month held = ctx.value(Month.class).orElse(null);
-        MenuButton pill = Pills.bare(held == null ? Values.labelOr(ctx.source(), "Month…") : PickRules.longName(held));
+        MenuButton pill = Pills.bare(held == null ? Slots.sourceOr(ctx, "Month…") : PickRules.longName(held));
         GridPane grid = new GridPane();
         grid.setHgap(4);
         grid.setVgap(4);
@@ -201,9 +201,10 @@ public final class BasicsEditors {
         field.setPrefColumnCount(whole ? 8 : 10);
         if (!range.isEmpty()) field.setTooltip(new Tooltip("Allowed: " + range));
 
-        // The stepper (picker 6e3): ▲/▼ and the scroll wheel move by one, or by the last decimal place shown;
-        // Shift is ×10. Each step writes, like typing a number and pressing Enter, and stops at the range's ends.
-        java.util.function.BiConsumer<Integer, Boolean> step = (direction, shift) -> {
+        // The stepper (picker 6e3): ▲/▼, the arrow keys and the wheel move by one, or by the last decimal place
+        // shown; Shift is ×10. Each step writes, like typing a number and pressing Enter, and stops at the
+        // range's ends.
+        return Fields.stepped(field, (direction, shift) -> {
             double current;
             try {
                 current = Double.parseDouble(field.getText().trim());
@@ -214,22 +215,7 @@ public final class BasicsEditors {
                     whole, bounds.min(), bounds.max());
             field.setText(whole ? Long.toString(Math.round(next)) : trim(next));
             Values.setNumber(ctx, next);
-        };
-        // Shift is read as the button is pressed: an action event does not carry the modifier keys.
-        boolean[] shift = {false};
-        Button up = Pills.icon("▲", () -> step.accept(1, shift[0]));
-        Button down = Pills.icon("▼", () -> step.accept(-1, shift[0]));
-        up.setOnMousePressed(e -> shift[0] = e.isShiftDown());
-        down.setOnMousePressed(e -> shift[0] = e.isShiftDown());
-        up.setTooltip(new Tooltip("Up one (Shift: ten) — or scroll over the number"));
-        down.setTooltip(new Tooltip("Down one (Shift: ten) — or scroll over the number"));
-        field.setOnScroll(e -> {
-            if (e.getDeltaY() != 0) step.accept(e.getDeltaY() > 0 ? 1 : -1, e.isShiftDown());
         });
-        HBox row = new HBox(2, field, new VBox(0, up, down));
-        row.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(field, Priority.ALWAYS);
-        return row;
     }
 
     /**
@@ -351,7 +337,7 @@ public final class BasicsEditors {
     /** What an offset time pill says: {@code 07:30 UTC}, the source as written, or {@code Time…} when empty. */
     static String offsetTimeLabel(ValueContext ctx) {
         return ctx.value(OffsetTime.class).map(TimeText::pill)
-                .orElseGet(() -> Slots.isEmpty(ctx) ? "Time…" : Slots.raw(ctx));
+                .orElseGet(() -> Slots.sourceOr(ctx, "Time…"));
     }
 
     // ---- previews: a value shown, not edited ------------------------------------------------------------
@@ -388,7 +374,7 @@ public final class BasicsEditors {
     /** An offset from UTC: a pill naming it ({@code UTC+02:00}) that opens every offset clocks keep. */
     public static Node zoneOffset(ValueContext ctx) {
         ZoneOffset held = ctx.value(ZoneOffset.class).orElse(null);
-        MenuButton pill = Pills.bare(held == null ? Values.labelOr(ctx.source(), "Offset…") : TimeText.offset(held));
+        MenuButton pill = Pills.bare(held == null ? Slots.sourceOr(ctx, "Offset…") : TimeText.offset(held));
         for (ZoneOffset offset : TimeText.offsets()) {
             javafx.scene.control.MenuItem item = new javafx.scene.control.MenuItem(TimeText.offset(offset));
             item.setOnAction(e -> {
@@ -403,7 +389,7 @@ public final class BasicsEditors {
     /** What a time pill says: {@code 07:30}, the source as written, or {@code Time…} when empty. */
     static String timeLabel(ValueContext ctx) {
         return ctx.value(LocalTime.class).map(TimeText::pill)
-                .orElseGet(() -> Slots.isEmpty(ctx) ? "Time…" : Slots.raw(ctx));
+                .orElseGet(() -> Slots.sourceOr(ctx, "Time…"));
     }
 
     /**
@@ -433,7 +419,7 @@ public final class BasicsEditors {
      */
     public static String durationLabel(ValueContext ctx, Duration value) {
         if (value != null) return DurationText.spell(value.toMillis());
-        return Slots.isEmpty(ctx) ? "Duration…" : Slots.raw(ctx);
+        return Slots.sourceOr(ctx, "Duration…");
     }
 
     /**

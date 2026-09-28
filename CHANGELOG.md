@@ -21,6 +21,8 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **The number field's stepper is the toolkit's `Fields.stepped`**: ▲/▼ and the wheel as before, and now the
+  ↑/↓ keys too. Pill labels for an unread value go through `Slots.sourceOr`.
 - **Declared through the contract's steps, with no toolkit class.** `BasicsPlugin` is one
   `StudioPlugin.id(ID).named(NAME).types(() -> BasicsTypes.ALL)` on `DeclaredPlugin`; each type is
   `PluginType.value(…)`, its factory a method reference (`LocalDate::of`, `Color::new`) and its parts accessors,
