@@ -21,6 +21,12 @@ heading in that module's own release commit.
 
 ### Changed
 
+- **Declared through the contract's steps, with no toolkit class.** `BasicsPlugin` is one
+  `StudioPlugin.id(ID).named(NAME).types(() -> BasicsTypes.ALL)` on `DeclaredPlugin`; each type is
+  `PluginType.value(…)`, its factory a method reference (`LocalDate::of`, `Color::new`) and its parts accessors,
+  so no method is named by string. **A value a file writes out of range** — `new Color(300, 0, 0)`,
+  `LocalDate.of(2026, 13, 1)` — now builds nothing and is shown as written, where it was pulled in or replaced
+  by the fresh value.
 - **`BasicsTypes` declares each type as one constant** (`TEXT`, `FLAG`, …, `MONTH`) built with the toolkit's
   `Types`; the thirteen nested `…Type` classes and the private `method` helper are gone. `ALL` is unchanged
   in content and order. Breaking for code that named a nested class; nothing outside this module did.

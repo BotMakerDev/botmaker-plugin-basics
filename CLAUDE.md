@@ -12,6 +12,11 @@ repositories fit together; this file is what is true *here*.
 > `managed.ManagedValues` (item 5) is the contract's `com.botmaker.plugin.api.managed.ManagedValues`, typed by
 > a plugin's `ManagedValue<T>`. Nothing here runs in a bot, so `BasicsIsBotSafeTest` is deleted and the third
 > rule below is history. Read the numbered items as how the module got here.
+>
+> **Also since 2026-09-28 it names no toolkit class to declare itself**: `BasicsPlugin` is a contract
+> `DeclaredPlugin` built from `StudioPlugin.id(ID).named(NAME).types(() -> BasicsTypes.ALL)`, and each type is
+> a `PluginType.value(…)` whose factory is a method reference (`LocalDate::of`) and whose build is derived by
+> invoking it — a value out of range builds nothing and is shown as written.
 
 It owned three things, all three landed on 2026-09-09.
 

@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * read there at all: a preview written {@code ctx -> new Label(…)} answered a {@code Label} where a
  * {@code Node} is declared, so the verifier loaded both classes when {@code BasicsTypes} loaded, and the
  * validator skipped the check with "could not be linked". The previews are {@code BasicsEditors} methods now,
- * named through the toolkit's {@code Types.Drawn}, and nothing JavaFX-shaped is linked until the host draws.
+ * named through the contract's {@code Drawn}, and nothing JavaFX-shaped is linked until the host draws.
  *
  * <p>The classpath is this test's own minus the JavaFX jars, under the platform loader — the SDK's
  * {@code SdkPluginHeadlessTest} explains why not the application loader.

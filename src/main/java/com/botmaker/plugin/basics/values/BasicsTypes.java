@@ -2,7 +2,6 @@ package com.botmaker.plugin.basics.values;
 
 import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.PluginType;
-import com.botmaker.plugin.toolkit.Types;
 
 import java.awt.Color;
 import java.time.DayOfWeek;
@@ -13,11 +12,6 @@ import java.time.Month;
 import java.time.OffsetTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.function.Supplier;
-
-import static com.botmaker.plugin.toolkit.Types.count;
-import static com.botmaker.plugin.toolkit.Types.method;
-import static com.botmaker.plugin.toolkit.Types.whole;
 
 /**
  * The thirteen types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
@@ -38,8 +32,11 @@ import static com.botmaker.plugin.toolkit.Types.whole;
  * {@code ValueCodec} with {@code parse}/{@code store}/{@code literal}/{@code valueOfLiteral}, and — for the
  * types the host could not seed — a {@code SourceSeed} carrying the fresh value as Java <em>text</em>. Two
  * of the four were strings javac never looked at. Then one class per type; since 2026-09-28 one
- * {@link Types} expression, which says only the fresh value, the editor, and for a call how a value comes
- * apart.
+ * {@link PluginType#value} declaration, which says only the fresh value, the editor, and for a call the
+ * factory as a method reference and one accessor per part. The value is built back by invoking the factory,
+ * so a component a file writes out of range — {@code new Color(300, 0, 0)}, {@code LocalDate.of(2026, 13, 1)}
+ * — builds nothing and is shown as written, rather than pulled in or replaced by the fresh value as it was
+ * until then.
  *
  * <p><b>The identity is the Java class now, not an id.</b> A project's file says
  * {@code java.time.Duration} because that is what the field is declared as, and has done since a parameter
@@ -75,16 +72,28 @@ public final class BasicsTypes {
     }
 
     /** Text. A bot's most common field, and the one the host writes as a plain literal. */
-    public static final PluginType<String> TEXT = Types.editable(String.class, () -> "", () -> BasicsEditors::text);
+    public static final PluginType<String> TEXT = PluginType.value(String.class)
+            .fresh(() -> "")
+            .editor(() -> BasicsEditors::text)
+            .writtenAsLiteral();
 
     /** A tick box. {@code false} is the fresh value, which is the state that does nothing. */
-    public static final PluginType<Boolean> FLAG = Types.editable(boolean.class, () -> false, () -> BasicsEditors::flag);
+    public static final PluginType<Boolean> FLAG = PluginType.value(boolean.class)
+            .fresh(() -> false)
+            .editor(() -> BasicsEditors::flag)
+            .writtenAsLiteral();
 
     /** A whole number. */
-    public static final PluginType<Integer> WHOLE = Types.editable(int.class, () -> 0, () -> BasicsEditors::whole);
+    public static final PluginType<Integer> WHOLE = PluginType.value(int.class)
+            .fresh(() -> 0)
+            .editor(() -> BasicsEditors::whole)
+            .writtenAsLiteral();
 
     /** A decimal number. */
-    public static final PluginType<Double> DECIMAL = Types.editable(double.class, () -> 0.0, () -> BasicsEditors::decimal);
+    public static final PluginType<Double> DECIMAL = PluginType.value(double.class)
+            .fresh(() -> 0.0)
+            .editor(() -> BasicsEditors::decimal)
+            .writtenAsLiteral();
 
     /**
      * One character.
@@ -93,29 +102,28 @@ public final class BasicsTypes {
      * type and would not recognise in their own file. It is the default the old reader answered for
      * unreadable text, carried over unchanged.
      */
-    public static final PluginType<Character> CHARACTER =
-            Types.editable(char.class, () -> 'a', () -> BasicsEditors::character);
+    public static final PluginType<Character> CHARACTER = PluginType.value(char.class)
+            .fresh(() -> 'a')
+            .editor(() -> BasicsEditors::character)
+            .writtenAsLiteral();
 
     /**
      * A colour, written as its three components, {@code new Color(r, g, b)}.
      *
      * <p>Never {@code Color.decode("#FF0000")}, which parses at class initialisation and can throw. White
      * is the fresh value — visible on every background, and what the old reader answered for unreadable
-     * text. A component out of range is pulled in rather than thrown at: a file may say anything.
+     * text. The accessors' {@code int}s pick {@code Color(int, int, int)} out of its constructors.
      */
-    public static final PluginType<Color> COLOR = Types.editable(Color.class, () -> Color.WHITE, () -> BasicsEditors::color)
-            .writtenAs(Types.call(Color.class, Types.constructor(Color.class, int.class, int.class, int.class),
-                    c -> List.of(c.getRed(), c.getGreen(), c.getBlue()),
-                    parts -> new Color(channel(parts, 0), channel(parts, 1), channel(parts, 2))));
-
-    private static final LocalDate FRESH_DATE = LocalDate.of(2000, 1, 1);
+    public static final PluginType<Color> COLOR = PluginType.value(Color.class)
+            .fresh(() -> Color.WHITE)
+            .editor(() -> BasicsEditors::color)
+            .writtenAs(Color::new, Color::getRed, Color::getGreen, Color::getBlue);
 
     /** A date. {@code LocalDate.of(2000, 1, 1)} is the fresh one, as the old reader's fallback was. */
-    public static final PluginType<LocalDate> DATE = Types.editable(LocalDate.class, () -> FRESH_DATE, () -> BasicsEditors::date)
-            .writtenAs(Types.call(LocalDate.class, method(LocalDate.class, "of", int.class, int.class, int.class),
-                    d -> List.of(d.getYear(), d.getMonthValue(), d.getDayOfMonth()),
-                    parts -> orElse(() -> LocalDate.of(whole(parts, 0), whole(parts, 1), whole(parts, 2)),
-                            FRESH_DATE)));
+    public static final PluginType<LocalDate> DATE = PluginType.value(LocalDate.class)
+            .fresh(() -> LocalDate.of(2000, 1, 1))
+            .editor(() -> BasicsEditors::date)
+            .writtenAs(LocalDate::of, LocalDate::getYear, LocalDate::getMonthValue, LocalDate::getDayOfMonth);
 
     /**
      * A time of day.
@@ -123,16 +131,11 @@ public final class BasicsTypes {
      * <p>Seconds are always written, so a {@code 07:30:15} in somebody's file is not silently truncated to
      * the minute the first time the window opens.
      */
-    public static final PluginType<LocalTime> TIME =
-            Types.editable(LocalTime.class, () -> LocalTime.MIDNIGHT, () -> BasicsEditors::time)
-                    .preview(() -> BasicsEditors::timePreview)
-                    .writtenAs(Types.call(LocalTime.class,
-                            method(LocalTime.class, "of", int.class, int.class, int.class),
-                            t -> List.of(t.getHour(), t.getMinute(), t.getSecond()),
-                            parts -> orElse(() -> LocalTime.of(whole(parts, 0), whole(parts, 1), whole(parts, 2)),
-                                    LocalTime.MIDNIGHT)));
-
-    private static final OffsetTime FRESH_OFFSET_TIME = OffsetTime.of(0, 0, 0, 0, ZoneOffset.UTC);
+    public static final PluginType<LocalTime> TIME = PluginType.value(LocalTime.class)
+            .fresh(() -> LocalTime.MIDNIGHT)
+            .editor(() -> BasicsEditors::time)
+            .preview(() -> BasicsEditors::timePreview)
+            .writtenAs(LocalTime::of, LocalTime::getHour, LocalTime::getMinute, LocalTime::getSecond);
 
     /**
      * A time of day at an offset from UTC (feedback 3) — {@code OffsetTime.of(7, 30, 0, 0, ZoneOffset.UTC)}. A
@@ -140,29 +143,24 @@ public final class BasicsTypes {
      * which is what a game's daily reset at 00:00 UTC is. Nanoseconds are always written as 0, so the Java is
      * the one {@code OffsetTime.of} a person writes.
      */
-    public static final PluginType<OffsetTime> OFFSET_TIME =
-            Types.editable(OffsetTime.class, () -> FRESH_OFFSET_TIME, () -> BasicsEditors::offsetTime)
-                    .preview(() -> BasicsEditors::offsetTimePreview)
-                    .writtenAs(Types.call(OffsetTime.class, method(OffsetTime.class, "of",
-                                    int.class, int.class, int.class, int.class, ZoneOffset.class),
-                            t -> List.of(t.getHour(), t.getMinute(), t.getSecond(), t.getNano(), t.getOffset()),
-                            parts -> orElse(() -> OffsetTime.of(whole(parts, 0), whole(parts, 1), whole(parts, 2),
-                                    whole(parts, 3), Types.part(parts, 4, ZoneOffset.class)), FRESH_OFFSET_TIME)));
+    public static final PluginType<OffsetTime> OFFSET_TIME = PluginType.value(OffsetTime.class)
+            .fresh(() -> OffsetTime.of(0, 0, 0, 0, ZoneOffset.UTC))
+            .editor(() -> BasicsEditors::offsetTime)
+            .preview(() -> BasicsEditors::offsetTimePreview)
+            .writtenAs(OffsetTime::of, OffsetTime::getHour, OffsetTime::getMinute, OffsetTime::getSecond,
+                    OffsetTime::getNano, OffsetTime::getOffset);
 
     /**
      * An offset from UTC, part of an {@link #OFFSET_TIME} (feedback 3). {@code ZoneOffset.UTC} is written as
      * that constant; any other offset as {@code ZoneOffset.ofHoursMinutes(h, m)}, the minutes carrying the
      * hours' sign.
      */
-    public static final PluginType<ZoneOffset> ZONE_OFFSET =
-            Types.editable(ZoneOffset.class, () -> ZoneOffset.UTC, () -> BasicsEditors::zoneOffset)
-                    .writtenAs(Types.call(ZoneOffset.class,
-                                    method(ZoneOffset.class, "ofHoursMinutes", int.class, int.class),
-                                    offset -> List.of(offset.getTotalSeconds() / 3600,
-                                            (offset.getTotalSeconds() % 3600) / 60),
-                                    parts -> orElse(() -> ZoneOffset.ofHoursMinutes(whole(parts, 0), whole(parts, 1)),
-                                            ZoneOffset.UTC))
-                            .constants(Types.constant(ZoneOffset.class, "UTC")));
+    public static final PluginType<ZoneOffset> ZONE_OFFSET = PluginType.value(ZoneOffset.class)
+            .fresh(() -> ZoneOffset.UTC)
+            .editor(() -> BasicsEditors::zoneOffset)
+            .writtenAs(ZoneOffset::ofHoursMinutes,
+                    offset -> offset.getTotalSeconds() / 3600, offset -> (offset.getTotalSeconds() % 3600) / 60)
+            .constants(ZoneOffset.UTC);
 
     /**
      * A length of time, written as milliseconds.
@@ -172,23 +170,29 @@ public final class BasicsTypes {
      * hand-written initializer and is shown as the author wrote it, which is the same answer any expression
      * the host did not write gets.
      */
-    public static final PluginType<Duration> DURATION =
-            Types.editable(Duration.class, () -> Duration.ZERO, () -> BasicsEditors::duration)
-                    .preview(() -> BasicsEditors::durationPreview)
-                    .writtenAs(Types.call(Duration.class, method(Duration.class, "ofMillis", long.class),
-                            d -> List.of(d.toMillis()), parts -> Duration.ofMillis(count(parts, 0))));
+    public static final PluginType<Duration> DURATION = PluginType.value(Duration.class)
+            .fresh(() -> Duration.ZERO)
+            .editor(() -> BasicsEditors::duration)
+            .preview(() -> BasicsEditors::durationPreview)
+            .writtenAs(Duration::ofMillis, Duration::toMillis);
 
     /**
      * A day of the week — {@code DayOfWeek.MONDAY}, a constant the host reads and writes as the enum it is.
      * Declared since picker 6e3 so basics draws it (a row of seven days) rather than the host's generic enum
      * dropdown: a JDK type is basics' to draw.
      */
-    public static final PluginType<DayOfWeek> DAY_OF_WEEK = Types.enumType(DayOfWeek.class, () -> BasicsEditors::dayOfWeek)
-            .preview(() -> BasicsEditors::dayOfWeekPreview);
+    public static final PluginType<DayOfWeek> DAY_OF_WEEK = PluginType.value(DayOfWeek.class)
+            .firstConstant()
+            .editor(() -> BasicsEditors::dayOfWeek)
+            .preview(() -> BasicsEditors::dayOfWeekPreview)
+            .writtenAsConstant();
 
     /** A month — {@code Month.MARCH}, drawn as a pill opening the twelve (picker 6e3). */
-    public static final PluginType<Month> MONTH = Types.enumType(Month.class, () -> BasicsEditors::month)
-            .preview(() -> BasicsEditors::monthPreview);
+    public static final PluginType<Month> MONTH = PluginType.value(Month.class)
+            .firstConstant()
+            .editor(() -> BasicsEditors::month)
+            .preview(() -> BasicsEditors::monthPreview)
+            .writtenAsConstant();
 
     /**
      * The thirteen, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
@@ -197,20 +201,4 @@ public final class BasicsTypes {
     public static final List<PluginType<?>> ALL = List.of(
             TEXT, FLAG, WHOLE, DECIMAL, CHARACTER, COLOR, DATE, TIME, OFFSET_TIME, ZONE_OFFSET, DURATION,
             DAY_OF_WEEK, MONTH);
-
-    private static int channel(List<Object> parts, int index) {
-        return Math.clamp(whole(parts, index), 0, 255);
-    }
-
-    /**
-     * {@code build}, or {@code fallback} when the JDK refuses the parts — an impossible date in somebody's
-     * file reads as the fresh value rather than stopping the project from opening.
-     */
-    private static <T> T orElse(Supplier<T> build, T fallback) {
-        try {
-            return build.get();
-        } catch (RuntimeException impossible) {
-            return fallback;
-        }
-    }
 }

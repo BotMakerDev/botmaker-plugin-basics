@@ -77,8 +77,8 @@ class BasicsPluginTest {
 
     @Test
     void the_types_are_the_thirteen_this_plugin_declares() {
-        // Through the plugin rather than through BasicsTypes.ALL directly: what a host gets is the memoised
-        // buildTypes() hook, and a plugin that declares types nobody can reach is the bug.
+        // Through the plugin rather than through BasicsTypes.ALL directly: what a host gets is the declaration's
+        // types supplier, and a plugin that declares types nobody can reach is the bug.
         assertEquals(BasicsTypes.ALL, plugin.types());
         assertEquals(13, plugin.types().size(), plugin.types().toString());
         // A time at an offset and the offset itself since picker feedback 3.
