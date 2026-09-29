@@ -89,6 +89,18 @@ public final class BasicsTypes {
             .editor(() -> BasicsEditors::whole)
             .writtenAsLiteral();
 
+    /**
+     * A large whole number, for the {@code long} a bot passes as milliseconds or a timestamp. The field is the
+     * whole-number one, which writes as the type the slot is declared as.
+     *
+     * <p>Declared since 2026-09-29: until then a {@code long} slot had no editor and was shown read-only, so a
+     * timeout dropped from the palette stayed at its {@code 0}.
+     */
+    public static final PluginType<Long> LARGE_WHOLE = PluginType.value(long.class)
+            .fresh(() -> 0L)
+            .editor(() -> BasicsEditors::whole)
+            .writtenAsLiteral();
+
     /** A decimal number. */
     public static final PluginType<Double> DECIMAL = PluginType.value(double.class)
             .fresh(() -> 0.0)
@@ -169,9 +181,12 @@ public final class BasicsTypes {
      * {@code Duration.ofSeconds(3)} in somebody's file is <b>not</b> rewritten into it: it reads as a
      * hand-written initializer and is shown as the author wrote it, which is the same answer any expression
      * the host did not write gets.
+     *
+     * <p>Fresh is one second (2026-09-29; it was zero). A duration a user drops is nearly always a wait or a
+     * timeout, and at zero the wait did nothing and the timeout gave up before it looked once.
      */
     public static final PluginType<Duration> DURATION = PluginType.value(Duration.class)
-            .fresh(() -> Duration.ZERO)
+            .fresh(() -> Duration.ofSeconds(1))
             .editor(() -> BasicsEditors::duration)
             .preview(() -> BasicsEditors::durationPreview)
             .writtenAs(Duration::ofMillis, Duration::toMillis);
@@ -195,10 +210,10 @@ public final class BasicsTypes {
             .writtenAsConstant();
 
     /**
-     * The thirteen, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
+     * The fourteen, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
      * with, then the seven time types.
      */
     public static final List<PluginType<?>> ALL = List.of(
-            TEXT, FLAG, WHOLE, DECIMAL, CHARACTER, COLOR, DATE, TIME, OFFSET_TIME, ZONE_OFFSET, DURATION,
+            TEXT, FLAG, WHOLE, LARGE_WHOLE, DECIMAL, CHARACTER, COLOR, DATE, TIME, OFFSET_TIME, ZONE_OFFSET, DURATION,
             DAY_OF_WEEK, MONTH);
 }

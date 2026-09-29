@@ -18,8 +18,13 @@ heading in that module's own release commit.
   `ZoneOffset.ofHoursMinutes(2, 0)`.
 - **`DayOfWeek` and `Month` are basics' types.** A day is a row of seven toggles (Mon–Sun); a month is a pill
   opening the twelve as a grid. They replace the host's generic enum dropdown.
+- **`long` is a basics type**, drawn by the whole-number field. A `long` slot, such as an SDK timeout in
+  milliseconds, was shown read-only and stayed at the `0` it was dropped with.
 
 ### Changed
+
+- **A new `Duration` starts at one second**, not zero. A duration somebody drops is nearly always a wait or a
+  timeout, and at zero the wait did nothing and the timeout gave up before looking once.
 
 - **The number field's stepper is the toolkit's `Fields.stepped`**: ▲/▼ and the wheel as before, and now the
   ↑/↓ keys too. Pill labels for an unread value go through `Slots.sourceOr`.

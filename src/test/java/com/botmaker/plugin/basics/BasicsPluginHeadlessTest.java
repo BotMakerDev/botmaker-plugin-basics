@@ -35,7 +35,7 @@ class BasicsPluginHeadlessTest {
             Object instance = plugin.getDeclaredConstructor().newInstance();
 
             List<?> types = (List<?>) plugin.getMethod("types").invoke(instance);
-            assertEquals(13, types.size());
+            assertEquals(14, types.size());
         }
     }
 

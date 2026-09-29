@@ -76,11 +76,19 @@ class BasicsPluginTest {
     }
 
     @Test
-    void the_types_are_the_thirteen_this_plugin_declares() {
+    void a_fresh_duration_is_one_second_so_a_dropped_wait_waits() {
+        assertEquals(java.time.Duration.ofSeconds(1), BasicsTypes.DURATION.fresh());
+        assertEquals(0L, BasicsTypes.LARGE_WHOLE.fresh());
+    }
+
+    @Test
+    void the_types_are_the_fourteen_this_plugin_declares() {
         // Through the plugin rather than through BasicsTypes.ALL directly: what a host gets is the declaration's
         // types supplier, and a plugin that declares types nobody can reach is the bug.
         assertEquals(BasicsTypes.ALL, plugin.types());
-        assertEquals(13, plugin.types().size(), plugin.types().toString());
+        assertEquals(14, plugin.types().size(), plugin.types().toString());
+        // long since 2026-09-29: an SDK timeout slot had no editor.
+        assertTrue(plugin.types().stream().anyMatch(t -> t.type() == long.class), plugin.types().toString());
         // A time at an offset and the offset itself since picker feedback 3.
         List<Class<?>> timeTypes = plugin.types().stream().<Class<?>>map(PluginType::type).toList();
         assertTrue(timeTypes.contains(java.time.OffsetTime.class) && timeTypes.contains(java.time.ZoneOffset.class),
