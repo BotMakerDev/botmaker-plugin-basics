@@ -7,6 +7,86 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.2.0; re-released for updated upstream pins.
+
+No source changes since v0.1.1; re-released for updated upstream pins.
+
+No source changes since v0.1.0; re-released for updated upstream pins.
+
+### Added
+
+- **A time at an offset from UTC.** `OffsetTime` is a basics type, written
+  `OffsetTime.of(7, 30, 0, 0, ZoneOffset.UTC)`: the same dial, with the offset picked under it (every offset
+  clocks keep, UTC first to hand), and a game's daily reset at 00:00 UTC is one value. `ZoneOffset` is a type
+  of its own too, a pill listing the offsets; UTC is written `ZoneOffset.UTC`, any other
+  `ZoneOffset.ofHoursMinutes(2, 0)`.
+- **`DayOfWeek` and `Month` are basics' types.** A day is a row of seven toggles (Mon–Sun); a month is a pill
+  opening the twelve as a grid. They replace the host's generic enum dropdown.
+- **`long` is a basics type**, drawn by the whole-number field. A `long` slot, such as an SDK timeout in
+  milliseconds, was shown read-only and stayed at the `0` it was dropped with.
+
+### Changed
+
+- **A new `Duration` starts at one second**, not zero. A duration somebody drops is nearly always a wait or a
+  timeout, and at zero the wait did nothing and the timeout gave up before looking once.
+
+- **The number field's stepper is the toolkit's `Fields.stepped`**: ▲/▼ and the wheel as before, and now the
+  ↑/↓ keys too. Pill labels for an unread value go through `Slots.sourceOr`.
+- **Declared through the contract's steps, with no toolkit class.** `BasicsPlugin` is one
+  `StudioPlugin.id(ID).named(NAME).types(() -> BasicsTypes.ALL)` on `DeclaredPlugin`; each type is
+  `PluginType.value(…)`, its factory a method reference (`LocalDate::of`, `Color::new`) and its parts accessors,
+  so no method is named by string. **A value a file writes out of range** — `new Color(300, 0, 0)`,
+  `LocalDate.of(2026, 13, 1)` — now builds nothing and is shown as written, where it was pulled in or replaced
+  by the fresh value.
+- **`BasicsTypes` declares each type as one constant** (`TEXT`, `FLAG`, …, `MONTH`) built with the toolkit's
+  `Types`; the thirteen nested `…Type` classes and the private `method` helper are gone. `ALL` is unchanged
+  in content and order. Breaking for code that named a nested class; nothing outside this module did.
+
+### Fixed
+
+- **`botmaker plugin validate` checks this plugin's types headless.** A preview written `new Label(…)` made
+  the verifier load JavaFX when the type list loaded, so on the registry's CI the value-type, record and
+  managed checks were skipped as "could not be linked". The previews are `BasicsEditors` methods declared as
+  `Node`; `BasicsPluginHeadlessTest` reads the list with no JavaFX on the classpath.
+
+- **The time dial's hand drags**, and hours, minutes and seconds are three boxes you can type in. Clicking the
+  hours or minutes box shows that ring; a letter or an out-of-range number is refused and the box keeps its
+  value (it threw). The words say "on this computer's clock" for a local time, and the offset for the other.
+- **The character picker explains itself.** The ⋯ menu is gone: **Special…** opens the hard-to-type
+  characters in three labelled groups (Invisible, Separators, Brackets & quotes), and the field's tooltip says
+  a character is text, where a `Key` is something pressed. `PickRules.SPECIAL` holds the groups.
+- **A number keeps to its declared range.** The stepper stops at `@Param(min, max)`, a typed value outside
+  is pulled to the nearest end (a whole number to the nearest whole one inside), and the empty field and its
+  tooltip say the range ("0 – 1", "at most 10").
+- **The on/off switch is red Off, green On**, as well as saying so.
+- **All eleven types implement `EditableType`** (contract 0.3.0): basics draws every type it declares.
+- **Numbers step.** ▲/▼ and the scroll wheel move a whole number by one and a decimal by its last written
+  place (a tenth at least); Shift is ×10.
+- **A flag is an On/Off switch**, its state in words.
+- **Text opens as several lines** with ⤢. **A character** shows `space`, `tab`, `newline` by name, reads
+  them back when typed, and ⋯ offers common separators.
+- **A time of day is picked on a clock.** A `LocalTime` slot is a pill (`07:30`, `07:30:15` when the seconds
+  are not zero) opening a 24h clock dial — outer ring 1–12, inner 13–00, then the minutes — with a seconds
+  box, quick times (`00:00`, `06:00`, `12:00`, `18:00`), Now (written as a fixed time, never
+  `LocalTime.now()`) and the time in words (`= 7:30 in the morning`). It replaces the three inline boxes, so
+  the block gets narrower. The same write rule as Duration below; a time with nanoseconds keeps them unless
+  something is picked.
+- **Duration is picked, not typed.** A Duration slot is a pill (`1m30s`) that opens preset chips
+  (`100ms` … `1h`), one spinner per unit that carries into the next (`59s` ▴ is `1m0s`, never below zero) and
+  the length in words (`= 1 minute 30 seconds`). OK writes only what was picked and only when it changed, so
+  opening it and pressing OK leaves the file as it was. It is the only Duration editor now: the SDK's copy is
+  deleted. A Choices row shows the same pill text.
+
+### Removed
+
+- **`managed.ManagedValues`** — the `@Managed` runtime is the contract's (`com.botmaker.plugin.api.managed`),
+  typed by the plugin's `ManagedValue<T>`.
+- **`store.PluginData` and `store.Settings`**, with the Jackson dependency they needed. Nothing called them:
+  a plugin's values are Java in the bot. `BasicsPlugin.ID` is its own constant. Nothing here runs in a bot any
+  more, so `BasicsIsBotSafeTest` is gone too.
+
 ## [0.2.0] — 2026-10-05
 
 No source changes since v0.1.1; re-released for updated upstream pins.
