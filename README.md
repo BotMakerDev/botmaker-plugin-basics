@@ -9,7 +9,7 @@ classloader beside every other plugin the project resolves.
 
 ```xml
 <dependency>
-    <groupId>com.github.LiQiyeDev</groupId>
+    <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
     <version>v0.0.1</version>
 </dependency>

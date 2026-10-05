@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-      groupId is com.github.LiQiyeDev for the same reason as every other published module: JitPack serves
-      this repo as com.github.LiQiyeDev:botmaker-plugin-basics:<tag> whatever this pom says, so matching it
+      groupId is com.github.BotMakerDev for the same reason as every other published module: JitPack serves
+      this repo as com.github.BotMakerDev:botmaker-plugin-basics:<tag> whatever this pom says, so matching it
       here makes the reactor GAV identical to the published GAV. The version is cosmetic.
     -->
-    <groupId>com.github.LiQiyeDev</groupId>
+    <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
     <version>0.0.0-SNAPSHOT</version>
 
@@ -60,7 +60,7 @@
           com.botmaker.plugin.api.** precisely so there is exactly one.
         -->
         <dependency>
-            <groupId>com.github.LiQiyeDev</groupId>
+            <groupId>com.github.BotMakerDev</groupId>
             <artifactId>botmaker-studio-api</artifactId>
             <version>${botmaker.studioapi.version}</version>
             <scope>provided</scope>
@@ -72,7 +72,7 @@
           (optional means not transitive, which is the same bug this project has shipped three times).
         -->
         <dependency>
-            <groupId>com.github.LiQiyeDev</groupId>
+            <groupId>com.github.BotMakerDev</groupId>
             <artifactId>botmaker-plugin-toolkit</artifactId>
             <version>${botmaker.plugintoolkit.version}</version>
         </dependency>

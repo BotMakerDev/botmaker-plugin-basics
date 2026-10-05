@@ -9,6 +9,11 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
+### Changed
+
+- Published as `com.github.BotMakerDev:botmaker-plugin-basics` (was `com.github.LiQiyeDev`). Tags already
+  built under the old groupId still resolve under it.
+
 No source changes since v0.2.0; re-released for updated upstream pins.
 
 No source changes since v0.1.1; re-released for updated upstream pins.

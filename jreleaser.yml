@@ -36,7 +36,7 @@ project:
     homepage: https://github.com/BotMakerDev/botmaker-plugin-basics
   languages:
     java:
-      groupId: com.github.LiQiyeDev
+      groupId: com.github.BotMakerDev
       artifactId: botmaker-plugin-basics
       version: '21'
 
