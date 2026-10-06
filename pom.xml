@@ -7,11 +7,12 @@
     <!--
       groupId is com.github.BotMakerDev for the same reason as every other published module: JitPack serves
       this repo as com.github.BotMakerDev:botmaker-plugin-basics:<tag> whatever this pom says, so matching it
-      here makes the reactor GAV identical to the published GAV. The version is cosmetic.
+      here makes the reactor GAV identical to the published GAV. The version is real: -SNAPSHOT on main, the
+      release version on a tag; only the release moves it (umbrella docs/refactor/43-real-versions.md).
     -->
     <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
-    <version>0.0.0-SNAPSHOT</version>
+    <version>0.2.1-SNAPSHOT</version>
 
     <name>BotMaker Basics Plugin</name>
     <description>
@@ -40,9 +41,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>25.0.4</javafx.version>
         <junit.version>5.10.2</junit.version>
-        <!-- The reactor/offline values. jitpack.yml injects the released tags from .deps.env at build time. -->
-        <botmaker.studioapi.version>0.0.0-SNAPSHOT</botmaker.studioapi.version>
-        <botmaker.plugintoolkit.version>0.0.0-SNAPSHOT</botmaker.plugintoolkit.version>
+        <!-- Each upstream's main version; a release commit sets the released ones (doc 43). -->
+        <botmaker.studioapi.version>0.4.3-SNAPSHOT</botmaker.studioapi.version>
+        <botmaker.plugintoolkit.version>0.3.3-SNAPSHOT</botmaker.plugintoolkit.version>
     </properties>
 
     <repositories>

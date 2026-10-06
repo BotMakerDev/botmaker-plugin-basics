@@ -11,6 +11,9 @@ heading in that module's own release commit.
 
 ### Changed
 
+- The pom carries a real version and names the contract's and the toolkit's versions, so a tag's pom says
+  what it was built against; `.deps.env` is gone and JitPack runs a plain `mvn install` (umbrella
+  `docs/refactor/43-real-versions.md`).
 - Published as `com.github.BotMakerDev:botmaker-plugin-basics` (was `com.github.LiQiyeDev`). Tags already
   built under the old groupId still resolve under it.
 
