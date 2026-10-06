@@ -80,9 +80,9 @@ mvn verify                                        # here
 mvn -pl botmaker-plugin-basics -am install        # from the umbrella root, with its upstreams
 ```
 
-The contract and the toolkit resolve at `0.0.0-SNAPSHOT` — what a local install of those repositories
-produces. `jitpack.yml` injects the released tags from `.deps.env` at build time, and `flatten-maven-plugin`
-1.4.1 is what makes an injected pin reach the *published* pom rather than only that build. Both plugin pins
+On `main` the contract and the toolkit resolve at their `main` `-SNAPSHOT` — what a local install of those
+repositories produces. A tag's pom pins their released versions (the release commit writes them, umbrella
+doc 43), and `flatten-maven-plugin` 1.4.1 bakes the pins' values into the *published* pom. Both plugin pins
 (`flatten` 1.4.1, `maven-compiler-plugin` 3.11.0) are held where they are because **JitPack runs Maven
 3.6.1** and refuses to execute a plugin whose own prerequisite exceeds it — the tag is then pushed,
 permanent, and resolves to nothing. Three release chains have died that way.

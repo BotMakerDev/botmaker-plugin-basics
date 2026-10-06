@@ -46,7 +46,7 @@ Two things follow, and both are prices rather than surprises:
 mvn verify
 ```
 
-The contract and the toolkit resolve at `0.0.0-SNAPSHOT`, which is what a local `mvn install` of those
+The contract and the toolkit resolve at their `main` `-SNAPSHOT`, which is what a local `mvn install` of those
 repositories (or the umbrella reactor) produces. From the umbrella root:
 
 ```bash
@@ -55,7 +55,7 @@ mvn -pl botmaker-plugin-basics -am install
 
 ## Releasing
 
-Never from here. The umbrella's `./release.sh --plugin-basics` cuts the tag, writes `.deps.env` in the
-release commit, and this repository's own CI publishes the GitHub Release from that tag. A contract or
+Never from here. The umbrella's `./release.sh --plugin-basics` cuts the tag, writes the released versions into
+the pom in the release commit, and this repository's own CI publishes the GitHub Release from that tag. A contract or
 toolkit release **forces** one here, because `flatten-maven-plugin` bakes those pins into the published
 pom; a release here in turn forces the SDK, which depends on this module.

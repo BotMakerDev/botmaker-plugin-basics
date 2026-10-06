@@ -4,10 +4,10 @@ name: CI
 # `release` and `jitpack` only on a version tag.
 #
 # TWO UPSTREAMS ARE RESOLVED FROM SOURCE rather than from JitPack, and that follows from this pom: it pins
-# ${botmaker.studioapi.version} and ${botmaker.plugintoolkit.version} at 0.0.0-SNAPSHOT — the version the
-# umbrella reactor and a local `mvn install` produce — so there is no published artifact under those
-# coordinates to download. release.sh's check_ci_deps refuses a release whose ci.yml does not check out
-# every 0.0.0-SNAPSHOT upstream it declares, which is what keeps this list in step with the pom.
+# ${botmaker.studioapi.version} and ${botmaker.plugintoolkit.version} at their main -SNAPSHOT — the version
+# the umbrella reactor and a local `mvn install` produce — so there is no published artifact under those
+# coordinates to download. The release's CiDepsGate refuses a release whose ci.yml does not check out
+# every -SNAPSHOT upstream it declares, which is what keeps this list in step with the pom.
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
 
       # RETRIED — Maven Central answers 429 to GitHub-hosted runners; see .github/mvn-retry.sh.
       # The contract goes in first: the toolkit's own build resolves it.
-      - name: Install the upstreams (0.0.0-SNAPSHOT)
+      - name: Install the upstreams (their main -SNAPSHOT)
         run: |
           source .github/mvn-retry.sh
           mvn_retry mvn -B -f .deps/botmaker-studio-api/pom.xml install -DskipTests
