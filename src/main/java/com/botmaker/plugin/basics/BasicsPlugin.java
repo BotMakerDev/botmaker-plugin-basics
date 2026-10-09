@@ -15,7 +15,7 @@ import com.botmaker.plugin.basics.values.BasicsTypes;
  *
  * <p><b>That is all it owns, since 2026-09-28.</b> It held a store ({@code PluginData}, {@code Settings}) and
  * the bot-side {@code @Managed} runtime ({@code ManagedValues}) too. The store had no caller left — a plugin's
- * values are Java in the bot — and the runtime is the contract's, beside {@code @Managed}. So nothing here runs
+ * values are Java in the bot — and the runtime is the contract's, beside {@code @ManagedMarker}. So nothing here runs
  * in a bot, and the Jackson dependency the store needed is gone.
  *
  * <p><b>The id is the identity and it never changes.</b> {@code com.botmaker.basics} is what the plugin
