@@ -20,5 +20,8 @@ install:
   # flatten-maven-plugin writes them literally into the published pom. A tag cut by hand from main names
   # -SNAPSHOT upstreams, which JitPack cannot resolve: the build fails rather than publishing.
   # Disk, JDK and Maven first: before_install prints nothing to the log, and a lost tag should say why.
-  - df -h "$HOME" /tmp; ls "$HOME/maven/boot"; "$HOME/temurin25/bin/java" -version
+  - df -h "$HOME" /tmp; ls -l "$HOME/maven/boot"; "$HOME/temurin25/bin/java" -version
+  # The broken builders of 2026-10-10 had disk, the boot jar and a working java, and still could not load the
+  # Launcher: is it java reading the jar, or the mvn script's command line?
+  - echo "CLASSPATH=$CLASSPATH JDK_JAVA_OPTIONS=$JDK_JAVA_OPTIONS MAVEN_OPTS=$MAVEN_OPTS MAVEN_ARGS=$MAVEN_ARGS"; "$HOME/temurin25/bin/java" -cp "$HOME"/maven/boot/plexus-classworlds-*.jar org.codehaus.plexus.classworlds.launcher.Launcher; sh -x "$HOME/maven/bin/mvn" -v 2>&1 | tail -6
   - JAVA_HOME="$HOME/temurin25" PATH="$HOME/temurin25/bin:$PATH" "$HOME/maven/bin/mvn" install -DskipTests -Dmaven.javadoc.skip=true -B
