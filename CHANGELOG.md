@@ -7,7 +7,7 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
-## [Unreleased]
+## [0.3.2] — 2026-10-10
 
 No source changes since v0.3.0. v0.3.1 landed on a broken JitPack builder too (the same tree built by commit
 hash passed minutes later), and a tag that built `Error` stays broken.
