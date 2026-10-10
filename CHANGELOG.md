@@ -7,7 +7,7 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
-## [Unreleased]
+## [0.3.4] — 2026-10-10
 
 No source changes since v0.3.3, which never built on JitPack. Its builder (kernel 4.14) refuses the `statx`
 syscall that Java 22+ stats every file with, so java could open no jar; `jitpack.yml` now detects that and
