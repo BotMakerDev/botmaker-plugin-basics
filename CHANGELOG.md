@@ -9,9 +9,9 @@ heading in that module's own release commit.
 
 ## [Unreleased]
 
-No source changes since v0.3.3, which landed on a broken JitPack builder. `jitpack.yml` now deletes each
-downloaded archive once unpacked, skips the JDK's sources, and prints disk, Maven's boot jar and
-`java -version` before building, as the SDK's does.
+No source changes since v0.3.3, which never built on JitPack. Its builder (kernel 4.14) refuses the `statx`
+syscall that Java 22+ stats every file with, so java could open no jar; `jitpack.yml` now detects that and
+preloads `.jitpack/statx.c`, which answers `statx` from `fstatat`.
 
 ## [0.3.3] — 2026-10-10
 
