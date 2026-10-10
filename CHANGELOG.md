@@ -7,6 +7,15 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.3.0, which never built on JitPack: the builder's Maven could not start, and a tag
+that built `Error` stays broken. This is v0.3.0 as it was meant to resolve.
+
+### Changed
+
+- JitPack builds with a Temurin 25 and a Maven 3.9.9 the build downloads itself, not the builder's.
+
 ## [0.3.0] — 2026-10-10
 
 ### Changed
