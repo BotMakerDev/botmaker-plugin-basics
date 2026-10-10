@@ -7,6 +7,12 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.3.3, which landed on a broken JitPack builder. `jitpack.yml` now deletes each
+downloaded archive once unpacked, skips the JDK's sources, and prints disk, Maven's boot jar and
+`java -version` before building, as the SDK's does.
+
 ## [0.3.3] — 2026-10-10
 
 No source changes since v0.3.2; re-released for updated upstream pins.
