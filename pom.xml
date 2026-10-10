@@ -12,7 +12,7 @@
     -->
     <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
-    <version>0.3.2</version>
+    <version>0.3.3-SNAPSHOT</version>
 
     <name>BotMaker Basics Plugin</name>
     <description>
@@ -42,8 +42,8 @@
         <javafx.version>25.0.4</javafx.version>
         <junit.version>5.10.2</junit.version>
         <!-- Each upstream's main version; a release commit sets the released ones (doc 43). -->
-        <botmaker.studioapi.version>v0.7.0</botmaker.studioapi.version>
-        <botmaker.plugintoolkit.version>v0.6.0</botmaker.plugintoolkit.version>
+        <botmaker.studioapi.version>0.7.1-SNAPSHOT</botmaker.studioapi.version>
+        <botmaker.plugintoolkit.version>0.6.1-SNAPSHOT</botmaker.plugintoolkit.version>
     </properties>
 
     <repositories>
