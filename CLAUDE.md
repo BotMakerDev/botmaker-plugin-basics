@@ -38,12 +38,12 @@ both) and the toolkit is `compile` (it travels onto the project's own classloade
 `optional` — `optional` means *not transitive*, which is invisible in the module that has the bug and which
 this project has shipped three times.
 
-**Other plugins compile against this one, so it is not freely breakable.** The SDK declares it at
-`compile` scope. A plugin's compiled `.class` files cannot be rewritten by anybody, so everything public here
-owes **never-delete** and `@ReplacedBy`, exactly as `com.botmaker.sdk.api` does — and the trap that comes
-with it is Maven's **nearest-wins** mediation: nothing may declare this module directly beside a plugin that
-already brings it, or a bot resolves a version its plugin was never built against and fails with
-`NoSuchMethodError` at whichever method moved.
+**Other plugins compile against this one.** The SDK declares it at `compile` scope. While the platform is in
+active development its public members may break like the SDK's `api.*` (the maintainer's call, 2026-10-09):
+delete the old form once nothing uses it, and release the SDK with it. The trap that stays is Maven's
+**nearest-wins** mediation: nothing may declare this module directly beside a plugin that already brings it,
+or a bot resolves a version its plugin was never built against and fails with `NoSuchMethodError` at
+whichever method moved.
 
 ## The types, and the two laws they keep
 
