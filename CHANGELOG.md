@@ -15,6 +15,12 @@ No source changes since v0.3.3, which never built on JitPack. Its builder (kerne
 syscall that Java 22+ stats every file with, so java could open no jar; `jitpack.yml` now detects that and
 preloads `.jitpack/statx.c`, which answers `statx` from `fstatat`.
 
+### Build
+
+- **JitPack builds with `.jitpack/build.sh`**, the umbrella's `tools/jitpack/build.sh`: Maven 3.9.9 and every
+  dependency from Google's mirror of Maven Central first, with backoff and Maven's 429 retry, so Central's
+  `429 Too Many Requests` no longer loses a tag. The statx shim moved into it.
+
 ## [0.3.4] — 2026-10-10
 
 No source changes since v0.3.3, which never built on JitPack. Its builder (kernel 4.14) refuses the `statx`

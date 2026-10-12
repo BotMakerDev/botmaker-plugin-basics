@@ -83,9 +83,10 @@ mvn -pl botmaker-plugin-basics -am install        # from the umbrella root, with
 On `main` the contract and the toolkit resolve at their `main` `-SNAPSHOT` — what a local install of those
 repositories produces. A tag's pom pins their released versions (the release commit writes them, umbrella
 doc 43), and `flatten-maven-plugin` 1.4.1 bakes the pins' values into the *published* pom. Both plugin pins
-(`flatten` 1.4.1, `maven-compiler-plugin` 3.11.0) are held where they are because **JitPack runs Maven
-3.6.1** and refuses to execute a plugin whose own prerequisite exceeds it — the tag is then pushed,
-permanent, and resolves to nothing. Three release chains have died that way.
+(`flatten` 1.4.1, `maven-compiler-plugin` 3.11.0) date from when **JitPack ran Maven 3.6.1**, which refuses
+to execute a plugin whose own prerequisite exceeds it — the tag is then pushed, permanent, and resolves to
+nothing. Three release chains died that way. Since 2026-10-12 the build is `.jitpack/build.sh` (umbrella doc
+43 §6), Maven 3.9.9, and that is the ceiling `JitpackPluginsGate` holds.
 
 Releases are cut from the umbrella only: `./release.sh --plugin-basics`. A `--studio-api` or a
 `--plugin-toolkit` in the same run **forces** one here; a release here in turn **forces** `--sdk`.
