@@ -30,8 +30,8 @@
       IT IS ALSO A PLUGIN OTHER PLUGINS DEPEND ON, which is new in this project and has a price stated once
       here so it is not rediscovered: botmaker-sdk will declare this module at `compile` scope (phase 2 of
       ~/.claude/plans/settings-becomes-a-plugin.md), so its compiled classes are pinned to whatever is
-      published here. Nobody can rewrite a .class file, so this module owes never-delete and @ReplacedBy
-      exactly as com.botmaker.sdk.api does. The trap that goes with it is Maven's nearest-wins mediation:
+      published here. Nobody can rewrite a .class file, so a member removed here breaks the SDK until
+      the SDK is released against it (CLAUDE.md: it breaks like com.botmaker.sdk.api, released together). The trap that goes with it is Maven's nearest-wins mediation:
       nothing may declare this module DIRECTLY beside a plugin that already brings it, or the direct entry
       wins and a bot runs a version its plugin was never built against. That is the landmine
       MavenService.TOOLKIT_FALLBACK_VERSION was, and why that constant is deleted.
