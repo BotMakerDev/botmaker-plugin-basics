@@ -11,7 +11,6 @@ import java.time.LocalTime;
 import java.time.Month;
 import java.time.OffsetTime;
 import java.time.ZoneOffset;
-import java.util.List;
 
 /**
  * The thirteen types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
@@ -65,6 +64,12 @@ import java.util.List;
  * and which no other plugin may read, and its duration editor rewrites {@code Wait.time(x)} into
  * {@code Wait.between(min, max)}, which names an SDK type. <b>This is the one place a type is named twice,
  * and it is named for two different reasons.</b>
+ *
+ * <h2>Each field is a type, in the order a picker offers them</h2>
+ *
+ * <p>{@code BasicsPlugin} names this class ({@code .types(BasicsTypes.class)}) and the host takes every
+ * {@code public static final} declaration here, in field order: the literals a bot mostly counts, flags and
+ * labels with, then the seven time types. A type is declared by writing its field; there is no list to add it to.
  */
 public final class BasicsTypes {
 
@@ -208,12 +213,4 @@ public final class BasicsTypes {
             .editor(() -> BasicsEditors::month)
             .preview(() -> BasicsEditors::monthPreview)
             .writtenAsConstant();
-
-    /**
-     * The fourteen, in the order a picker should offer them: the literals a bot mostly counts, flags and labels
-     * with, then the seven time types.
-     */
-    public static final List<PluginType<?>> ALL = List.of(
-            TEXT, FLAG, WHOLE, LARGE_WHOLE, DECIMAL, CHARACTER, COLOR, DATE, TIME, OFFSET_TIME, ZONE_OFFSET, DURATION,
-            DAY_OF_WEEK, MONTH);
 }

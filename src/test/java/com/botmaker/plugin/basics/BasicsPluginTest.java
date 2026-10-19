@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -83,10 +82,11 @@ class BasicsPluginTest {
 
     @Test
     void the_types_are_the_fourteen_this_plugin_declares() {
-        // Through the plugin rather than through BasicsTypes.ALL directly: what a host gets is the declaration's
-        // types supplier, and a plugin that declares types nobody can reach is the bug.
-        assertEquals(BasicsTypes.ALL, plugin.types());
-        assertEquals(14, plugin.types().size(), plugin.types().toString());
+        // Through the plugin: what a host gets is the declaration's fields of BasicsTypes, in field order.
+        assertEquals(List.of(BasicsTypes.TEXT, BasicsTypes.FLAG, BasicsTypes.WHOLE, BasicsTypes.LARGE_WHOLE,
+                BasicsTypes.DECIMAL, BasicsTypes.CHARACTER, BasicsTypes.COLOR, BasicsTypes.DATE, BasicsTypes.TIME,
+                BasicsTypes.OFFSET_TIME, BasicsTypes.ZONE_OFFSET, BasicsTypes.DURATION, BasicsTypes.DAY_OF_WEEK,
+                BasicsTypes.MONTH), plugin.types());
         // long since 2026-09-29: an SDK timeout slot had no editor.
         assertTrue(plugin.types().stream().anyMatch(t -> t.type() == long.class), plugin.types().toString());
         // A time at an offset and the offset itself since picker feedback 3.
@@ -97,7 +97,7 @@ class BasicsPluginTest {
         List<Class<?>> classes = plugin.types().stream().<Class<?>>map(PluginType::type).toList();
         assertTrue(classes.contains(java.time.DayOfWeek.class) && classes.contains(java.time.Month.class),
                 classes.toString());
-        assertSame(plugin.types(), plugin.types(), "the build hook must run at most once");
+        assertEquals(plugin.types(), plugin.types(), "asking twice answers the same types");
     }
 
     /**

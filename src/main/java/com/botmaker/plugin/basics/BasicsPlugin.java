@@ -23,8 +23,8 @@ import com.botmaker.plugin.basics.values.BasicsTypes;
  * plugin installed keeps every value of a type declared here as written, renders it read-only and never
  * rewrites it — which is what makes an open vocabulary safe.
  *
- * <p><b>The type list is behind a supplier.</b> {@code ServiceLoader} runs this constructor while a project is
- * opening, and on headless hosts too; the list is built only when the host asks for it.
+ * <p><b>The types are named by their class.</b> {@code ServiceLoader} runs this constructor while a project is
+ * opening, and on headless hosts too; {@code BasicsTypes} is initialised only when the host asks for the types.
  */
 public final class BasicsPlugin extends DeclaredPlugin {
 
@@ -36,6 +36,6 @@ public final class BasicsPlugin extends DeclaredPlugin {
 
     public BasicsPlugin() {
         super(StudioPlugin.id(ID).named(NAME)
-                .types(() -> BasicsTypes.ALL));
+                .types(BasicsTypes.class));
     }
 }

@@ -18,9 +18,10 @@ its `ZoneOffset` (UTC written as `ZoneOffset.UTC` through `ComponentType.constan
 `ZoneOffset.ofHoursMinutes`). They are nobody's vocabulary in particular; the SDK keeps the types that are
 its own.
 
-- **`BasicsPlugin`** is one contract declaration: `StudioPlugin.id(ID).named(NAME).types(() ->
-  BasicsTypes.ALL)` on `DeclaredPlugin`. It names no toolkit class.
-- **`BasicsTypes`** holds the declarations: each type a `PluginType.value(…)` whose factory is a method
+- **`BasicsPlugin`** is one contract declaration: `StudioPlugin.id(ID).named(NAME).types(BasicsTypes.class)`
+  on `DeclaredPlugin`. It names no toolkit class.
+- **`BasicsTypes`** holds the declarations, collected by field in field order (the picker's order): each
+  type a `PluginType.value(…)` whose factory is a method
   reference (`LocalDate::of`, `Color::new`) with its parts' accessors, the build derived by invoking it — a
   value out of range builds nothing and is shown as written.
 - **`BasicsEditors`** draws them out of the toolkit's shapes (`Fields.committing`, `Fields.stepped`,
