@@ -7,6 +7,15 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+No source changes since v0.5.0; re-released for updated upstream pins.
+
+### Changed
+
+- **The types are named by their class**: `.types(BasicsTypes.class)`, and `BasicsTypes.ALL` is gone. The host
+  takes each type field in field order, the picker's order, which is unchanged. Needs the contract's next release.
+
 ## [0.5.0] — 2026-10-23
 
 ### Changed
