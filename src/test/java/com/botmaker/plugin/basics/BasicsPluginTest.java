@@ -1,15 +1,15 @@
 package com.botmaker.plugin.basics;
 
-import com.botmaker.plugin.api.StudioPlugin;
 import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.EditableType;
 import com.botmaker.plugin.api.value.PluginType;
 import com.botmaker.plugin.basics.values.BasicsTypes;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.ServiceLoader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * What a host asks a plugin: that it can find it, construct it, and get a well-formed answer to each of
  * its questions — nine types since 2026-09-09, and empty for the rest.
  *
- * <p>The discovery half runs {@link ServiceLoader} on this module's own classpath rather than through
- * {@code PluginLoader}. That is deliberate: {@code botmaker-plugin-host} is a <em>host's</em> dependency,
- * and a plugin taking it — even at test scope — would be modelling the wrong relationship in the one module
- * whose job is to be an example of the right one. What a real host adds on top is the classloader, and that
- * is {@code PluginLoaderTest}'s subject in the module that owns it; what is checked here is the part that
- * belongs to this jar, and the part that actually goes wrong — a {@code META-INF/services} file naming a
- * class that has been renamed or moved fails exactly here and nowhere else in a compile.
+ * <p>The discovery half reads this module's {@code pom.xml} rather than going through {@code PluginLoader}.
+ * That is deliberate: {@code botmaker-plugin-host} is a <em>host's</em> dependency, and a plugin taking it —
+ * even at test scope — would be modelling the wrong relationship in the one module whose job is to be an
+ * example of the right one. What a real host adds on top is the jar's pom and the classloader, and that is
+ * {@code PluginLoaderTest}'s subject in the module that owns it; what is checked here is the part that belongs
+ * to this module, and the part that actually goes wrong — a {@code botmaker.plugin} property naming a class
+ * that has been renamed or moved fails exactly here and nowhere else in a compile.
  */
 class BasicsPluginTest {
 
@@ -39,20 +39,13 @@ class BasicsPluginTest {
     }
 
     @Test
-    void the_service_declaration_names_this_class() {
-        List<String> found = new ArrayList<>();
-        for (StudioPlugin discovered : ServiceLoader.load(StudioPlugin.class)) {
-            found.add(discovered.id());
-        }
-        assertTrue(found.contains(BasicsPlugin.ID),
-                "ServiceLoader found " + found + " — check META-INF/services/"
-                        + StudioPlugin.class.getName());
-    }
-
-    @Test
-    void the_id_and_the_display_name_are_the_registered_ones() {
-        assertEquals("com.botmaker.basics", plugin.id());
-        assertEquals("BotMaker Basics", plugin.displayName());
+    void the_pom_names_this_class_and_the_name_studio_shows() throws IOException {
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("<botmaker.plugin>" + BasicsPlugin.class.getName() + "</botmaker.plugin>"),
+                "pom.xml's botmaker.plugin must name " + BasicsPlugin.class.getName());
+        assertTrue(pom.contains("<name>BotMaker Basics</name>"), "pom.xml's <name> is what Studio shows");
+        assertTrue(pom.contains("<properties>keep</properties>"),
+                "flatten must keep properties, or the jar's pom loses botmaker.plugin");
     }
 
     @Test

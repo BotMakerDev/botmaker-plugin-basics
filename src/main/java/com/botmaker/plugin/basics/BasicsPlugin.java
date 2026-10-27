@@ -18,24 +18,18 @@ import com.botmaker.plugin.basics.values.BasicsTypes;
  * values are Java in the bot — and the runtime is the contract's, beside {@code @ManagedMarker}. So nothing here runs
  * in a bot, and the Jackson dependency the store needed is gone.
  *
- * <p><b>The id is the identity and it never changes.</b> {@code com.botmaker.basics} is what the plugin
- * registry refuses to admit twice; the Maven coordinate may move under it. A project opened without this
+ * <p><b>The pom is the identity</b> (2026-10-27): its {@code botmaker.plugin} property names this class, its
+ * coordinate is the plugin's id and its {@code <name>} what Studio shows. A project opened without this
  * plugin installed keeps every value of a type declared here as written, renders it read-only and never
  * rewrites it — which is what makes an open vocabulary safe.
  *
- * <p><b>The types are named by their class.</b> {@code ServiceLoader} runs this constructor while a project is
- * opening, and on headless hosts too; {@code BasicsTypes} is initialised only when the host asks for the types.
+ * <p><b>The types are named by their class.</b> The host runs this constructor while a project is opening, and
+ * on headless hosts too; {@code BasicsTypes} is initialised only when the host asks for the types.
  */
 public final class BasicsPlugin extends DeclaredPlugin {
 
-    /** The registered plugin id; never change it. */
-    public static final String ID = "com.botmaker.basics";
-
-    /** What Studio shows in Manage Plugins. */
-    public static final String NAME = "BotMaker Basics";
-
     public BasicsPlugin() {
-        super(StudioPlugin.id(ID).named(NAME)
+        super(StudioPlugin.declare()
                 .types(BasicsTypes.class));
     }
 }

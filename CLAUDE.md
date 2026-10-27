@@ -8,7 +8,8 @@ file carried until 2026-09-28 is `git show ee3690b:CLAUDE.md` in this repository
 
 ## What this module is
 
-**Plugin #2**, id `com.botmaker.basics`: **the JDK value types and their editors, and nothing else.** Nothing
+**Plugin #2**, `com.github.BotMakerDev:botmaker-plugin-basics` (the pom's `botmaker.plugin` names the class,
+2026-10-27): **the JDK value types and their editors, and nothing else.** Nothing
 here runs in a bot. The SDK depends on it so a project can edit JDK values, and a project started from the
 *Base* template depends on it directly so its Parameters window offers any type at all.
 
@@ -18,7 +19,7 @@ its `ZoneOffset` (UTC written as `ZoneOffset.UTC` through `ComponentType.constan
 `ZoneOffset.ofHoursMinutes`). They are nobody's vocabulary in particular; the SDK keeps the types that are
 its own.
 
-- **`BasicsPlugin`** is one contract declaration: `StudioPlugin.id(ID).named(NAME).types(BasicsTypes.class)`
+- **`BasicsPlugin`** is one contract declaration: `StudioPlugin.declare().types(BasicsTypes.class)`
   on `DeclaredPlugin`. It names no toolkit class.
 - **`BasicsTypes`** holds the declarations, collected by field in field order (the picker's order): each
   type a `PluginType.value(…)` whose factory is a method

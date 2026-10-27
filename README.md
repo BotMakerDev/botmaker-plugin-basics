@@ -37,7 +37,8 @@ editor for `Color`, an eyedropper over the capture target; Studio asks which one
 ## Depending on it from another plugin
 
 Ordinary Maven — not through the contract, and not through a service lookup. `PluginLoader` builds **one**
-`URLClassLoader` over the whole resolved project classpath and runs one `ServiceLoader` pass in it, so
+`URLClassLoader` over the whole resolved project classpath and constructs, in it, the class each plugin jar's
+pom names in `botmaker.plugin`, so
 plugin A sees plugin B's classes and Maven has already mediated B to a single version.
 
 **Do not declare it directly beside a plugin that already brings it.** Maven's nearest-wins mediation makes

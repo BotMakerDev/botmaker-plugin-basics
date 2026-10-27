@@ -7,6 +7,14 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+### Changed
+
+- The plugin is declared in its pom (`botmaker.plugin`, kept by flatten in the published pom), not in a
+  `META-INF/services` file; its id is its coordinate and its name the pom's `<name>`, now *BotMaker Basics*.
+  `BasicsPlugin.ID` and `BasicsPlugin.NAME` are gone.
+
 ## [0.6.0] — 2026-10-25
 
 No source changes since v0.5.0; re-released for updated upstream pins.

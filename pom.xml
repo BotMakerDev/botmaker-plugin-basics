@@ -14,7 +14,8 @@
     <artifactId>botmaker-plugin-basics</artifactId>
     <version>0.6.1-SNAPSHOT</version>
 
-    <name>BotMaker Basics Plugin</name>
+    <!-- What Studio shows for this plugin: a plugin's name is its pom's <name> (2026-10-27). -->
+    <name>BotMaker Basics</name>
     <description>
         Plugin #2: the nine JDK value types a project's parameters are made of, the Settings a running bot
         reads them through, and the project store both of those are written into — usable by any other
@@ -37,6 +38,9 @@
       MavenService.TOOLKIT_FALLBACK_VERSION was, and why that constant is deleted.
     -->
     <properties>
+        <!-- The plugin class this jar is: the host reads it off the pom Maven copies into the jar, and this
+             pom's groupId:artifactId is the plugin's identity. Literal, and kept by flatten below. -->
+        <botmaker.plugin>com.botmaker.plugin.basics.BasicsPlugin</botmaker.plugin>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>27</javafx.version>
@@ -129,6 +133,9 @@
               1.4.1 for JitPack, NOT stale: 1.5.0 declares a Maven 3.5.4 prerequisite and 1.6.0 declares
               3.6.3. botmaker-plugin-toolkit v0.0.4 died on exactly that. Do not bump without proving
               JitPack's mvn version.
+
+              properties is kept beside repositories: the jar's own META-INF/maven pom is the flattened one,
+              and botmaker.plugin there is how a host knows the jar is a plugin.
             -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -138,6 +145,7 @@
                     <flattenMode>oss</flattenMode>
                     <pomElements>
                         <repositories>keep</repositories>
+                        <properties>keep</properties>
                     </pomElements>
                 </configuration>
                 <executions>
