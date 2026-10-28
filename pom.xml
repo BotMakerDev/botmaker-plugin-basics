@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.github.BotMakerDev</groupId>
         <artifactId>botmaker-plugin-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>v0.1.0</version>
         <relativePath>../botmaker-plugin-parent/pom.xml</relativePath>
     </parent>
 
@@ -25,7 +25,7 @@
     -->
     <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
-    <version>0.6.1-SNAPSHOT</version>
+    <version>0.7.0</version>
 
     <!-- What Studio shows for this plugin: a plugin's name is its pom's <name> (2026-10-27). -->
     <name>BotMaker Basics</name>
