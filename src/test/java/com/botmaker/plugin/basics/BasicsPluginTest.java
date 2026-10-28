@@ -45,7 +45,9 @@ class BasicsPluginTest {
         PluginTests.assertListsEveryField(BasicsTypes.class);
         String pom = Files.readString(Path.of("pom.xml"));
         assertTrue(pom.contains("<name>BotMaker Basics</name>"), "pom.xml's <name> is what Studio shows");
-        assertTrue(pom.contains("<properties>keep</properties>"),
+        // The parent's flatten (2026-10-28) writes .flattened-pom.xml at process-resources, before the tests.
+        String flattened = Files.readString(Path.of(".flattened-pom.xml"));
+        assertTrue(flattened.contains("<botmaker.plugin>" + BasicsPlugin.class.getName() + "</botmaker.plugin>"),
                 "flatten must keep properties, or the jar's pom loses botmaker.plugin");
     }
 

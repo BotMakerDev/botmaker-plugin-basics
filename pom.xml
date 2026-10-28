@@ -5,6 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
+      THE PARENT (2026-10-28), as every plugin's: it pins the contract, the toolkit and JavaFX together, sets
+      Java 25 and the compiler JitPack needs, flattens the published pom keeping <properties>, and copies
+      CHANGELOG.md and icon.png into the jar. Its version is a pin like any other (doc 43): the parent's -SNAPSHOT
+      on main, read from the umbrella's sibling checkout; its released tag on a tag, resolved through JitPack.
+    -->
+    <parent>
+        <groupId>com.github.BotMakerDev</groupId>
+        <artifactId>botmaker-plugin-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../botmaker-plugin-parent/pom.xml</relativePath>
+    </parent>
+
+    <!--
       groupId is com.github.BotMakerDev for the same reason as every other published module: JitPack serves
       this repo as com.github.BotMakerDev:botmaker-plugin-basics:<tag> whatever this pom says, so matching it
       here makes the reactor GAV identical to the published GAV. The version is real: -SNAPSHOT on main, the
@@ -39,18 +52,13 @@
     -->
     <properties>
         <!-- The plugin class this jar is: the host reads it off the pom Maven copies into the jar, and this
-             pom's groupId:artifactId is the plugin's identity. Literal, and kept by flatten below. -->
+             pom's groupId:artifactId is the plugin's identity. Literal, and kept by the parent's flatten. -->
         <botmaker.plugin>com.botmaker.plugin.basics.BasicsPlugin</botmaker.plugin>
-        <maven.compiler.release>25</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javafx.version>27</javafx.version>
         <junit.version>5.10.2</junit.version>
-        <!-- Each upstream's main version; a release commit sets the released ones (doc 43). -->
-        <botmaker.studioapi.version>0.12.1-SNAPSHOT</botmaker.studioapi.version>
-        <botmaker.plugintoolkit.version>0.11.1-SNAPSHOT</botmaker.plugintoolkit.version>
     </properties>
 
     <repositories>
+        <!-- JitPack serves the parent above on a tag, and the contract and toolkit it pins. -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -62,12 +70,11 @@
           The contract, `provided`: this module implements StudioPlugin, and the host already has these
           classes. A second copy inside this jar is the one mistake that produces a ClassCastException
           between two classes with identical names — PluginLoader is parent-first for
-          com.botmaker.plugin.api.** precisely so there is exactly one.
+          com.botmaker.plugin.api.** precisely so there is exactly one. Its version is the parent's.
         -->
         <dependency>
             <groupId>com.github.BotMakerDev</groupId>
             <artifactId>botmaker-studio-api</artifactId>
-            <version>${botmaker.studioapi.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -79,7 +86,6 @@
         <dependency>
             <groupId>com.github.BotMakerDev</groupId>
             <artifactId>botmaker-plugin-toolkit</artifactId>
-            <version>${botmaker.plugintoolkit.version}</version>
         </dependency>
 
         <!--
@@ -91,7 +97,6 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-            <version>${javafx.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -105,66 +110,9 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <!-- PIN THE COMPILER. Redundant locally, load-bearing on JitPack: its Maven defaults
-                 maven-compiler-plugin to 3.1, which predates maven.compiler.release (3.6) and so builds
-                 with source 5 — "Source option 5 is no longer supported". 3.11.0 rather than a newer one:
-                 3.12.0 raised the plugin's own Maven prerequisite to 3.6.3, which JitPack's Maven 3.6.1
-                 does not meet, and Maven refuses to EXECUTE such a plugin — the tag is pushed, permanent,
-                 and resolves to nothing. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-            </plugin>
-
-            <!--
-              Bakes the two ${botmaker.*.version} pins into the pom that is installed and published. Without
-              it a -D on the command line changes what THIS build resolves and nothing about what a consumer
-              resolving this plugin from JitPack sees — the 0.0.0-SNAPSHOT bug that shipped in every SDK up
-              to v1.0.24.
-
-              1.4.1 for JitPack, NOT stale: 1.5.0 declares a Maven 3.5.4 prerequisite and 1.6.0 declares
-              3.6.3. botmaker-plugin-toolkit v0.0.4 died on exactly that. Do not bump without proving
-              JitPack's mvn version.
-
-              properties is kept beside repositories: the jar's own META-INF/maven pom is the flattened one,
-              and botmaker.plugin there is how a host knows the jar is a plugin.
-            -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.4.1</version>
-                <configuration>
-                    <flattenMode>oss</flattenMode>
-                    <pomElements>
-                        <repositories>keep</repositories>
-                        <properties>keep</properties>
-                    </pomElements>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten-clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+    <!--
+      No <build>: the parent pins the compiler (3.11.0) and surefire, and runs flatten 1.4.1 keeping <properties>
+      and <repositories>, which this pom set itself until 2026-10-28. Why each is pinned is in the parent and in
+      the umbrella CLAUDE.md § JitPack.
+    -->
 </project>

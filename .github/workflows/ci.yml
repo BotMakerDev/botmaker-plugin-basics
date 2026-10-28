@@ -3,11 +3,12 @@ name: CI
 # Three jobs, the same shape as every other published BotMaker module: `build` on every push and PR,
 # `release` and `jitpack` only on a version tag.
 #
-# TWO UPSTREAMS ARE RESOLVED FROM SOURCE rather than from JitPack, and that follows from this pom: it pins
-# ${botmaker.studioapi.version} and ${botmaker.plugintoolkit.version} at their main -SNAPSHOT — the version
-# the umbrella reactor and a local `mvn install` produce — so there is no published artifact under those
-# coordinates to download. The release's CiDepsGate refuses a release whose ci.yml does not check out
-# every -SNAPSHOT upstream it declares, which is what keeps this list in step with the pom.
+# THE PARENT AND ITS TWO UPSTREAMS ARE RESOLVED FROM SOURCE rather than from JitPack, and that follows from
+# this pom: its <parent> botmaker-plugin-parent (2026-10-28) is at its main -SNAPSHOT and pins the contract and
+# the toolkit at theirs — the versions the umbrella reactor and a local `mvn install` produce — so there is no
+# published artifact under those coordinates to download. The parent's relativePath names the umbrella's
+# sibling, absent here, so Maven finds it in ~/.m2. The release's CiDepsGate refuses a release whose ci.yml
+# does not check out every -SNAPSHOT upstream and parent, which is what keeps this list in step with the pom.
 
 on:
   push:
@@ -35,6 +36,13 @@ jobs:
           repository: BotMakerDev/botmaker-plugin-toolkit
           path: .deps/botmaker-plugin-toolkit
 
+      # The parent this pom names: it pins the two above and holds the build every plugin shares.
+      - name: Check out botmaker-plugin-parent
+        uses: actions/checkout@v7
+        with:
+          repository: BotMakerDev/botmaker-plugin-parent
+          path: .deps/botmaker-plugin-parent
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -42,12 +50,13 @@ jobs:
           cache: maven
 
       # RETRIED — Maven Central answers 429 to GitHub-hosted runners; see .github/mvn-retry.sh.
-      # The contract goes in first: the toolkit's own build resolves it.
-      - name: Install the upstreams (their main -SNAPSHOT)
+      # The contract goes in first: the toolkit's own build resolves it, and the parent pins both.
+      - name: Install the parent and its two upstreams (their main -SNAPSHOT)
         run: |
           source .github/mvn-retry.sh
           mvn_retry mvn -B -f .deps/botmaker-studio-api/pom.xml install -DskipTests
           mvn_retry mvn -B -f .deps/botmaker-plugin-toolkit/pom.xml install -DskipTests
+          mvn_retry mvn -B -f .deps/botmaker-plugin-parent/pom.xml install
 
       - name: Build and test
         run: mvn -B verify

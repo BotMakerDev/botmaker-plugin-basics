@@ -11,6 +11,10 @@ heading in that module's own release commit.
 
 ### Changed
 
+- The pom names `botmaker-plugin-parent` as its `<parent>` (2026-10-28), like every plugin: the contract, the
+  toolkit and JavaFX come at the parent's pins, and the compiler, surefire and flatten settings are the parent's.
+  The published pom is the same shape (flattened, no parent), and the jar now carries this changelog as
+  `META-INF/botmaker/changelog.md`, which Studio shows on upgrade.
 - `BasicsTypes` is a `TypeHolder` whose `types()` lists the fourteen types in the picker's order (contract
   0.13.0: a holder says what it gives, nothing reads its fields). `BasicsPluginTest` runs the toolkit's
   `PluginTests.assertDeclared` and `assertListsEveryField`.
