@@ -4,6 +4,7 @@ import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.EditableType;
 import com.botmaker.plugin.api.value.PluginType;
 import com.botmaker.plugin.basics.values.BasicsTypes;
+import com.botmaker.plugin.toolkit.testing.PluginTests;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -40,9 +41,9 @@ class BasicsPluginTest {
 
     @Test
     void the_pom_names_this_class_and_the_name_studio_shows() throws IOException {
+        PluginTests.assertDeclared(BasicsPlugin.class);
+        PluginTests.assertListsEveryField(BasicsTypes.class);
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<botmaker.plugin>" + BasicsPlugin.class.getName() + "</botmaker.plugin>"),
-                "pom.xml's botmaker.plugin must name " + BasicsPlugin.class.getName());
         assertTrue(pom.contains("<name>BotMaker Basics</name>"), "pom.xml's <name> is what Studio shows");
         assertTrue(pom.contains("<properties>keep</properties>"),
                 "flatten must keep properties, or the jar's pom loses botmaker.plugin");

@@ -11,6 +11,9 @@ heading in that module's own release commit.
 
 ### Changed
 
+- `BasicsTypes` is a `TypeHolder` whose `types()` lists the fourteen types in the picker's order (contract
+  0.13.0: a holder says what it gives, nothing reads its fields). `BasicsPluginTest` runs the toolkit's
+  `PluginTests.assertDeclared` and `assertListsEveryField`.
 - The plugin is declared in its pom (`botmaker.plugin`, kept by flatten in the published pom), not in a
   `META-INF/services` file; its id is its coordinate and its name the pom's `<name>`, now *BotMaker Basics*.
   `BasicsPlugin.ID` and `BasicsPlugin.NAME` are gone.

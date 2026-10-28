@@ -1,5 +1,6 @@
 package com.botmaker.plugin.basics.values;
 
+import com.botmaker.plugin.api.TypeHolder;
 import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.PluginType;
 
@@ -11,9 +12,10 @@ import java.time.LocalTime;
 import java.time.Month;
 import java.time.OffsetTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 /**
- * The thirteen types plugin #2 declares — text, a flag, two numbers, a character, a colour, a date, a time of
+ * The fourteen types plugin #2 declares — text, a flag, three numbers, a character, a colour, a date, a time of
  * day, a duration, (since picker 6e3) a day of the week and a month, and (since picker feedback 3) a time of
  * day at an offset from UTC and the offset itself.
  *
@@ -65,15 +67,21 @@ import java.time.ZoneOffset;
  * {@code Wait.between(min, max)}, which names an SDK type. <b>This is the one place a type is named twice,
  * and it is named for two different reasons.</b>
  *
- * <h2>Each field is a type, in the order a picker offers them</h2>
+ * <h2>Each field is a type, listed in the order a picker offers them</h2>
  *
- * <p>{@code BasicsPlugin} names this class ({@code .types(BasicsTypes.class)}) and the host takes every
- * {@code public static final} declaration here, in field order: the literals a bot mostly counts, flags and
- * labels with, then the seven time types. A type is declared by writing its field; there is no list to add it to.
+ * <p>{@code BasicsPlugin} names this class ({@code .types(BasicsTypes.class)}) and the host takes what
+ * {@link #types()} lists, in its order: the literals a bot mostly counts, flags and labels with, then the seven
+ * time types. A type is declared by writing its field and listing it there.
  */
-public final class BasicsTypes {
+public final class BasicsTypes implements TypeHolder {
 
     private BasicsTypes() {
+    }
+
+    @Override
+    public List<PluginType<?>> types() {
+        return List.of(TEXT, FLAG, WHOLE, LARGE_WHOLE, DECIMAL, CHARACTER, COLOR, DATE, TIME, OFFSET_TIME, ZONE_OFFSET,
+                DURATION, DAY_OF_WEEK, MONTH);
     }
 
     /** Text. A bot's most common field, and the one the host writes as a plain literal. */
