@@ -7,6 +7,13 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+### Changed
+
+- A number's field has no range any more (2026-10-29): `@Param` lost `min`/`max`, so typed and stepped values are
+  written as they are. `PickRules.within` and `rangeLabel` are removed.
+
 ## [0.7.0] — 2026-10-28
 
 ### Changed
