@@ -45,12 +45,12 @@ class ParamAnnotationTest {
     }
 
     @Test
-    void itIsAFieldAnnotationAndSurvivesToRuntime() {
+    void itMarksAGroupOrAFieldAndSurvivesToRuntime() {
         Retention retention = Param.class.getAnnotation(Retention.class);
         assertEquals(RetentionPolicy.RUNTIME, retention.value(),
                 "a compiled bot is read by reflection as well as by Studio's parser");
         Target target = Param.class.getAnnotation(Target.class);
-        assertArrayEquals(new ElementType[] {ElementType.FIELD}, target.value());
+        assertArrayEquals(new ElementType[] {ElementType.TYPE, ElementType.FIELD}, target.value());
     }
 
     @Test
