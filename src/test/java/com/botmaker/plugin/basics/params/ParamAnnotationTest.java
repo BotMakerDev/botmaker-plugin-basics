@@ -33,7 +33,7 @@ class ParamAnnotationTest {
         @Param
         public static Duration plain = Duration.ofSeconds(3);
 
-        @Param(category = "Limits", description = "How many times to try",
+        @Param(description = "How many times to try",
                 visibility = Param.PUBLIC)
         public static int described = 10;
 
@@ -56,7 +56,6 @@ class ParamAnnotationTest {
     @Test
     void anUnadornedParameterDefaultsToEverythingUnsaid() throws Exception {
         Param param = Fixture.class.getField("plain").getAnnotation(Param.class);
-        assertEquals("", param.category());
         assertEquals("", param.description());
         // The default is the narrower of the two: a parameter nobody classified is not in the Runner.
         assertEquals(Param.EDITOR, param.visibility());
@@ -65,15 +64,15 @@ class ParamAnnotationTest {
     @Test
     void everyMemberIsReadBackAsWritten() throws Exception {
         Param param = Fixture.class.getField("described").getAnnotation(Param.class);
-        assertEquals("Limits", param.category());
         assertEquals("How many times to try", param.description());
         assertEquals(Param.PUBLIC, param.visibility());
     }
 
     @Test
     void itSaysNothingAboutTheValue() {
-        // 2026-10-29: min, max and options went; a value's rules are its type's.
-        assertEquals(List.of("category", "description", "visibility"),
+        // 2026-10-29: min, max and options went; a value's rules are its type's. 2026-11-05: category went, the
+        // group class is the category.
+        assertEquals(List.of("description", "visibility"),
                 Arrays.stream(Param.class.getDeclaredMethods()).map(Method::getName)
                         .sorted().toList());
     }
