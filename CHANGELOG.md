@@ -7,6 +7,12 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [Unreleased]
+
+- `Duration.ofSeconds(n)`, `ofMinutes(n)` and `ofHours(n)` read as the durations they are (2026-11-09), so a
+  hand-written `.takes(Duration.ofSeconds(40))` shows as a value instead of read-only text. A duration is still
+  written as `Duration.ofMillis(n)`.
+
 ## [0.8.1] — 2026-11-01
 
 No source changes since v0.8.0; re-released for updated upstream pins.

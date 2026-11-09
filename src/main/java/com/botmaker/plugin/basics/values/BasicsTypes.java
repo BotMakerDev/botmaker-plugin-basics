@@ -3,6 +3,7 @@ package com.botmaker.plugin.basics.values;
 import com.botmaker.plugin.api.TypeHolder;
 import com.botmaker.plugin.api.value.ComponentType;
 import com.botmaker.plugin.api.value.PluginType;
+import com.botmaker.plugin.api.value.Ref;
 
 import java.awt.Color;
 import java.time.DayOfWeek;
@@ -190,10 +191,9 @@ public final class BasicsTypes implements TypeHolder {
     /**
      * A length of time, written as milliseconds.
      *
-     * <p>One spelling, {@code Duration.ofMillis(n)}, so there is one rule for writing and one for reading.
-     * {@code Duration.ofSeconds(3)} in somebody's file is <b>not</b> rewritten into it: it reads as a
-     * hand-written initializer and is shown as the author wrote it, which is the same answer any expression
-     * the host did not write gets.
+     * <p>Written in one spelling, {@code Duration.ofMillis(n)}. {@code Duration.ofSeconds}, {@code ofMinutes}
+     * and {@code ofHours} read too ({@link #DURATION_SECONDS}, 2026-11-09), and stay as the author wrote them
+     * until the host rewrites the call holding them, which writes {@code ofMillis}.
      *
      * <p>Fresh is one second (2026-09-29; it was zero). A duration a user drops is nearly always a wait or a
      * timeout, and at zero the wait did nothing and the timeout gave up before it looked once.
@@ -203,6 +203,28 @@ public final class BasicsTypes implements TypeHolder {
             .editor(() -> BasicsEditors::duration)
             .preview(() -> BasicsEditors::durationPreview)
             .writtenAs(Duration::ofMillis, Duration::toMillis);
+
+    /**
+     * {@code Duration.ofSeconds(n)}, {@code ofMinutes(n)} and {@code ofHours(n)} read as the durations they are
+     * (2026-11-09): what a bot's author writes by hand, {@code .takes(Duration.ofSeconds(40))}, reads as a value instead
+     * of a hand-written initializer. A rewrite of the call holding one writes {@link #DURATION}'s {@code ofMillis},
+     * the first declaration that rebuilds every duration: these only read.
+     */
+    public static final ComponentType<Duration> DURATION_SECONDS = ComponentType.part(Duration.class)
+            .writtenAs((Ref.Of1<Long, Duration>) Duration::ofSeconds, Duration::toSeconds);
+
+    /** {@code Duration.ofMinutes(n)}: see {@link #DURATION_SECONDS}. */
+    public static final ComponentType<Duration> DURATION_MINUTES = ComponentType.part(Duration.class)
+            .writtenAs((Ref.Of1<Long, Duration>) Duration::ofMinutes, Duration::toMinutes);
+
+    /** {@code Duration.ofHours(n)}: see {@link #DURATION_SECONDS}. */
+    public static final ComponentType<Duration> DURATION_HOURS = ComponentType.part(Duration.class)
+            .writtenAs((Ref.Of1<Long, Duration>) Duration::ofHours, Duration::toHours);
+
+    @Override
+    public List<ComponentType<?>> components() {
+        return List.of(DURATION_SECONDS, DURATION_MINUTES, DURATION_HOURS);
+    }
 
     /**
      * A day of the week — {@code DayOfWeek.MONDAY}, a constant the host reads and writes as the enum it is.
