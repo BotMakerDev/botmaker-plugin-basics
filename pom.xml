@@ -26,6 +26,12 @@
     <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
     <version>0.10.1-SNAPSHOT</version>
+    <licenses>
+        <license>
+            <name>PolyForm-Noncommercial-1.0.0</name>
+            <url>https://polyformproject.org/licenses/noncommercial/1.0.0</url>
+        </license>
+    </licenses>
 
     <!-- What Studio shows for this plugin: a plugin's name is its pom's <name> (2026-10-27). -->
     <name>BotMaker Basics</name>
