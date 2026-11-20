@@ -92,6 +92,6 @@ to execute a plugin whose own prerequisite exceeds it — the tag is then pushed
 nothing. Three release chains died that way. Since 2026-10-12 the build is `.jitpack/build.sh` (umbrella doc
 43 §6), Maven 3.9.9, and that is the ceiling `JitpackPluginsGate` holds.
 
-Releases are cut from the umbrella only: `./release.sh --plugin-basics`. A `--studio-api`, a
-`--plugin-toolkit` or a `--plugin-parent` in the same run **forces** one here; a release here in turn **forces**
-`--sdk`.
+Releases are cut from the umbrella only: `sluice --plugin-basics <version>`. A `--studio-api`, a
+`--plugin-toolkit` or a `--plugin-parent` owes one here, and a release here owes `--sdk`: sluice's owed gate
+refuses a run that does not request them, unless `--with-dependents` adds them.
