@@ -1,12 +1,12 @@
 # botmaker-plugin-basics
 
-**Plugin #2** (`com.botmaker.basics`): the JDK value types a bot's parameters are made of, and their
+**Plugin #2** (`com.github.BotMakerDev:botmaker-plugin-basics`): the JDK value types a bot's parameters are made of, and their
 editors. Nothing in it runs in a bot.
 
 It is a **plugin**, not a platform module: Studio does not ship it, does not depend on it and does not
 resolve it. A project that wants it declares it, and `PluginLoader` puts it on that project's own
-classloader beside every other plugin the project resolves. The SDK brings it; a project started from the
-*Base* template declares it directly, so its Parameters window offers any type at all.
+classloader beside every other plugin the project resolves. The SDK brings it; a project without the SDK
+can declare it directly, in Project ▸ Plugins & Libraries…, so its Parameters window offers any type at all.
 
 ```xml
 <dependency>
