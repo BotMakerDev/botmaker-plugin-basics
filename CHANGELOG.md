@@ -7,7 +7,7 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
-## [Unreleased]
+## [0.11.0] — 2026-11-21
 
 ### Changed
 
@@ -15,6 +15,7 @@ heading in that module's own release commit.
   its SPDX header, and the `reuse` workflow checks both on each push.
 - Licensed under PolyForm Noncommercial 1.0.0, copyright LiQiyeDev: free for any noncommercial use, commercial use
   needs a license from LiQiyeDev. Releases up to v0.10.0 stay CC0 1.0.
+- Built against botmaker-plugin-parent 0.6.0 (was 0.5.0).
 
 ## [0.10.0] — 2026-11-16
 
