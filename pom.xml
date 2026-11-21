@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.github.BotMakerDev</groupId>
         <artifactId>botmaker-plugin-parent</artifactId>
-        <version>v0.6.0</version>
+        <version>0.6.1-SNAPSHOT</version>
         <relativePath>../botmaker-plugin-parent/pom.xml</relativePath>
     </parent>
 
@@ -25,7 +25,7 @@
     -->
     <groupId>com.github.BotMakerDev</groupId>
     <artifactId>botmaker-plugin-basics</artifactId>
-    <version>0.11.0</version>
+    <version>0.11.1-SNAPSHOT</version>
     <licenses>
         <license>
             <name>PolyForm-Noncommercial-1.0.0</name>
