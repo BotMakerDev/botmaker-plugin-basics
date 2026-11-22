@@ -36,8 +36,7 @@ class ParamAnnotationTest {
         @Param
         public static Duration plain = Duration.ofSeconds(3);
 
-        @Param(description = "How many times to try",
-                visibility = Param.PUBLIC)
+        @Param(description = "How many times to try")
         public static int described = 10;
 
         @Param
@@ -60,32 +59,21 @@ class ParamAnnotationTest {
     void anUnadornedParameterDefaultsToEverythingUnsaid() throws Exception {
         Param param = Fixture.class.getField("plain").getAnnotation(Param.class);
         assertEquals("", param.description());
-        // The default is the narrower of the two: a parameter nobody classified is not in the Runner.
-        assertEquals(Param.EDITOR, param.visibility());
     }
 
     @Test
     void everyMemberIsReadBackAsWritten() throws Exception {
         Param param = Fixture.class.getField("described").getAnnotation(Param.class);
         assertEquals("How many times to try", param.description());
-        assertEquals(Param.PUBLIC, param.visibility());
     }
 
     @Test
     void itSaysNothingAboutTheValue() {
         // 2026-10-29: min, max and options went; a value's rules are its type's. 2026-11-05: category went, the
-        // group class is the category.
-        assertEquals(List.of("description", "visibility"),
+        // group class is the category. 2026-11-22: visibility went, every parameter is the user's.
+        assertEquals(List.of("description"),
                 Arrays.stream(Param.class.getDeclaredMethods()).map(Method::getName)
                         .sorted().toList());
-    }
-
-    @Test
-    void theTwoVisibilitiesAreTheSpellingsStudioCompares() {
-        // Constants rather than literals on both sides: this test exists to fail if either string changes,
-        // because a project's Java holds whatever was spelled at the time.
-        assertEquals("editor", Param.EDITOR);
-        assertEquals("public", Param.PUBLIC);
     }
 
     @Test
