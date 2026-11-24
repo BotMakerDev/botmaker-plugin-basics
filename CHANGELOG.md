@@ -7,12 +7,13 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
-## [Unreleased]
+## [0.11.2] — 2026-11-24
 
 ### Changed
 
 - `ParamAnnotationTest` no longer tests a parameter's visibility, which botmaker-studio-api 0.20.0 removes; the
   plugin itself is unchanged.
+- Built against botmaker-plugin-parent 0.6.2 (was 0.6.1).
 
 ## [0.11.1] — 2026-11-22
 
