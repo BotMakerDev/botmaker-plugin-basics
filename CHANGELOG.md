@@ -7,6 +7,12 @@ tags the umbrella's `release.sh` cuts. Write under `## [Unreleased]`: the versio
 while the prose is being written — it is what the decide pass computes — and the release stamps it onto the
 heading in that module's own release commit.
 
+## [0.12.0] — 2026-11-27
+
+### Changed
+
+- Built against botmaker-plugin-parent 0.7.0 (was 0.6.2).
+
 ## [0.11.2] — 2026-11-24
 
 ### Changed
